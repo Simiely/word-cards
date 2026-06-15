@@ -1,0 +1,20 @@
+# 临时/测试文件
+images_test/
+images_v2/
+images_v3/
+images/
+sounds/
+sounds_base64.json
+screenshot.png
+screenshot2.png
+
+# 旧版本
+animal-cards.html
+animal-cards-standalone.html
+animal-cards.tar.gz
+
+# 系统
+.codebuddy/
+__pycache__/
+*.pyc
+.DS_Store
