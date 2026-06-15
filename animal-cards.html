@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>动物卡片学习 - Animal Flashcards</title>
+    <style>
+        :root {
+            --bg: #f5f0e8;
+            --card-bg: #ffffff;
+            --primary: #4a7c59;
+            --accent: #e8a87c;
+            --text: #3c3c3c;
+            --radius: 24px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(74,124,89,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(232,168,124,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(74,124,89,0.04) 0%, transparent 50%);
+            display: flex; align-items: center; justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            width: 100%; max-width: 520px;
+            height: 100dvh; height: 100svh;
+            display: flex; flex-direction: column; align-items: center;
+            padding: calc(12px + var(--safe-top)) 16px calc(12px + var(--safe-bottom)) 16px;
+        }
+        .header { text-align: center; flex-shrink: 0; padding: 4px 0 2px; }
+        .header .badge {
+            display: inline-block; background: var(--primary); color: #fff;
+            font-size: 13px; padding: 4px 16px; border-radius: 20px; letter-spacing: 0.5px;
+        }
+        .header .counter { font-size: 13px; color: #999; font-weight: 500; margin-top: 4px; }
+
+        .card {
+            width: 100%; flex: 1 1 auto; min-height: 0;
+            background: var(--card-bg); border-radius: var(--radius);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08); overflow: hidden;
+            display: flex; flex-direction: column; margin: 10px 0;
+        }
+
+        .card-image {
+            width: 100%; flex: 1 1 auto; min-height: 0;
+            aspect-ratio: 3 / 4; max-height: 100%;
+            overflow: hidden; background: #eef2e6; position: relative; cursor: pointer;
+        }
+        .card-image img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            transition: opacity 0.35s ease;
+        }
+        .card-image img.switching { opacity: 0; }
+        .card-image:active img { transform: scale(1.03); }
+
+        .card-image.no-images {
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .card-image.no-images .placeholder { text-align: center; }
+        .card-image.no-images .placeholder .ph-emoji {
+            font-size: clamp(80px, 18vw, 140px); display: block; line-height: 1;
+        }
+        .card-image.no-images .placeholder .ph-text {
+            font-size: 11px; letter-spacing: 1px; color: #c0c0c0; margin-top: 4px;
+        }
+
+        .image-indicators {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 6px; z-index: 2;
+        }
+        .image-indicators .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: rgba(255,255,255,0.45); border: 1.5px solid rgba(255,255,255,0.75);
+            transition: all 0.3s ease;
+        }
+        .image-indicators .dot.active {
+            background: #fff; border-color: #fff; transform: scale(1.35);
+        }
+        .image-label {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.45); color: #fff;
+            font-size: 11px; padding: 3px 10px; border-radius: 10px;
+            letter-spacing: 0.5px; z-index: 2; pointer-events: none;
+        }
+
+        .card-body {
+            flex-shrink: 0; padding: 14px 24px 16px;
+            text-align: left; min-height: 120px;
+            display: flex; flex-direction: column; justify-content: center;
+            position: relative;
+        }
+        .card-body .animal-emoji {
+            position: absolute; top: 14px; right: 24px;
+            font-size: clamp(36px, 7vw, 48px); line-height: 1;
+            pointer-events: none; opacity: 0.85;
+        }
+        .card-body .zh-name {
+            font-size: clamp(28px, 5vw, 36px); font-weight: 700; color: var(--text);
+            cursor: pointer; line-height: 1.25; min-height: 1.25em; padding-right: 60px;
+        }
+        .card-body .zh-name:active { color: var(--primary); }
+        .card-body .en-name {
+            font-size: clamp(17px, 3.5vw, 20px); font-weight: 400; color: #888;
+            cursor: pointer; margin-top: 2px; line-height: 1.25; min-height: 1.25em;
+            padding-right: 60px;
+        }
+        .card-body .en-name:active { color: var(--accent); }
+        .card-body .fact {
+            font-size: clamp(12px, 2.2vw, 14px); color: #888; margin-top: 8px;
+            line-height: 1.55; cursor: pointer;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+            overflow: hidden; padding-right: 4px;
+        }
+        .card-body .fact:active { color: var(--primary); }
+
+        .nav {
+            flex-shrink: 0; display: flex; gap: 10px; align-items: center;
+            width: 100%; justify-content: center; padding: 4px 0;
+        }
+        .nav button {
+            background: var(--card-bg); border: 2px solid #e0dcd4;
+            color: var(--text); font-size: 15px; padding: 11px 22px;
+            border-radius: 50px; cursor: pointer; transition: all 0.2s;
+            font-weight: 600; letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            white-space: nowrap; -webkit-tap-highlight-color: transparent;
+        }
+        .nav button:active { border-color: var(--primary); color: var(--primary); transform: scale(0.95); }
+        .nav .btn-random { border-color: var(--accent); color: var(--accent); }
+        .nav .btn-random:active { background: var(--accent); color: #fff; }
+
+        @media (min-width: 640px) {
+            .container { max-width: 480px; padding: 24px 16px; }
+            .card { max-height: 700px; }
+            .card-image { aspect-ratio: auto; max-height: 420px; }
+            .card-body { min-height: 130px; }
+        }
+        @media (min-height: 850px) and (min-width: 400px) {
+            .card-body { padding: 18px 28px 20px; min-height: 130px; }
+            .nav button { padding: 13px 26px; font-size: 16px; }
+        }
+        @media (max-height: 700px) {
+            .header { padding: 2px 0; }
+            .header .badge { font-size: 11px; padding: 3px 12px; }
+            .header .counter { font-size: 11px; }
+            .card { margin: 6px 0; }
+            .card-body { padding: 10px 16px 12px; min-height: 100px; }
+            .card-body .fact { -webkit-line-clamp: 2; }
+            .nav button { padding: 9px 16px; font-size: 13px; }
+            .nav { gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="badge">动物卡片学习</div>
+        <div class="counter"><span id="currentIdx">1</span> / <span id="totalCount">20</span></div>
+    </div>
+    <div class="card" id="card">
+        <div class="card-image" id="cardImage"></div>
+        <div class="card-body">
+            <div class="animal-emoji" id="animalEmoji"></div>
+            <div class="zh-name" id="zhName" onclick="speak('zh')"></div>
+            <div class="en-name" id="enName" onclick="speak('en')"></div>
+            <div class="fact" id="fact" onclick="speak('fact')"></div>
+        </div>
+    </div>
+    <div class="nav">
+        <button onclick="goTo(currentIndex - 1)">← 上一个</button>
+        <button class="btn-random" onclick="goRandom()">🎲 随机</button>
+        <button onclick="goTo(currentIndex + 1)">下一个 →</button>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// 图片和声音文件路径说明：
+//   图片放在 images_v4/ 目录，命名格式: {动物英文}_{类别}.jpg
+//     类别: face(面部) / body(全身) / life(生活)
+//   声音放在 sounds_normalized/ 目录，命名格式: {动物英文}.mp3
+// ============================================================
+
+const animals = [
+    { zh:'狮子',   en:'Lion',      emoji:'🦁', sound:'sounds_normalized/lion.mp3',
+      images:['images_v4/lion_face.jpg','images_v4/lion_body.jpg','images_v4/lion_life.jpg'],
+      imgLabels:['面部','全身','生活'],
+      fact:'狮子是唯一群居的猫科动物，一个狮群通常由1-2头雄狮和数头母狮组成。雄狮的鬃毛越浓密越受母狮青睐。' },
+    { zh:'大象',   en:'Elephant',  emoji:'🐘', sound:'sounds_normalized/elephant.mp3',
+      images:['images_v4/elephant_face.jpg','images_v4/elephant_body.jpg','images_v4/elephant_life.jpg'],
+      imgLabels:['面部','全身','生活'],
+      fact:'大象是陆地上最大的哺乳动物。它们的鼻子由超过4万块肌肉组成，既能拔起大树也能捡起一粒花生。' },
+    { zh:'熊猫',   en:'Panda',     emoji:'🐼', sound:'',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'大熊猫是中国国宝，虽然属于食肉目，但99%的食物都是竹子，每天要花12-16小时进食。' },
+    { zh:'老虎',   en:'Tiger',     emoji:'🐯', sound:'sounds_normalized/lion.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'老虎是世界上最大的猫科动物，每只老虎身上的条纹都是独一无二的，就像人类的指纹一样。' },
+    { zh:'长颈鹿', en:'Giraffe',   emoji:'🦒', sound:'sounds_normalized/giraffe.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'长颈鹿是地球上最高的陆地动物，脖子虽然很长，但颈椎骨数量和人类一样都是7块。' },
+    { zh:'斑马',   en:'Zebra',     emoji:'🦓', sound:'sounds_normalized/zebra.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'斑马的黑白条纹不仅是伪装，还能防蚊虫叮咬。每只斑马的条纹图案都是独一无二的。' },
+    { zh:'企鹅',   en:'Penguin',   emoji:'🐧', sound:'sounds_normalized/penguin.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'企鹅是鸟类中的游泳高手，帝企鹅可以潜入500米深的海水中，憋气超过20分钟。' },
+    { zh:'海豚',   en:'Dolphin',   emoji:'🐬', sound:'',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'海豚是非常聪明的海洋哺乳动物，它们用超声波定位和交流，睡觉时大脑一半休息一半保持清醒。' },
+    { zh:'猴子',   en:'Monkey',    emoji:'🐵', sound:'sounds_normalized/monkey.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'猴子是灵长类动物中种类最丰富的一类，它们有复杂的社会结构，会使用工具和互相梳理毛发。' },
+    { zh:'兔子',   en:'Rabbit',    emoji:'🐰', sound:'',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'兔子的耳朵可以旋转270度，帮助它们听到远处的危险。它们高兴时会跳起来在空中转身，这叫"binky"。' },
+    { zh:'猫',     en:'Cat',       emoji:'🐱', sound:'sounds_normalized/cat.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'猫是世界上最受欢迎的宠物之一。它们呼噜呼噜的声音不仅能表示开心，还能帮助骨骼愈合。' },
+    { zh:'狗',     en:'Dog',       emoji:'🐶', sound:'sounds_normalized/dog.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'狗是人类最早驯化的动物，它们的嗅觉比人类灵敏1万到10万倍，能嗅出疾病和情绪变化。' },
+    { zh:'马',     en:'Horse',     emoji:'🐴', sound:'sounds_normalized/horse.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'马可以站着睡觉，但需要躺下才能进入深度睡眠。它们的视野几乎达到360度。' },
+    { zh:'牛',     en:'Cow',       emoji:'🐮', sound:'sounds_normalized/cow.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'牛有四个胃室来消化草料，它们能看到颜色，而且对红色其实并不敏感。' },
+    { zh:'羊',     en:'Sheep',     emoji:'🐑', sound:'sounds_normalized/sheep.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'绵羊有极好的记忆力，能记住50多张面孔长达两年。它们还能通过面部表情识别同伴的情绪。' },
+    { zh:'鸡',     en:'Chicken',   emoji:'🐔', sound:'sounds_normalized/chicken.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'鸡是世界上最常见的鸟类，全球养殖数量超过250亿只。它们能用超过30种不同的叫声来交流。' },
+    { zh:'鸭',     en:'Duck',      emoji:'🦆', sound:'sounds_normalized/duck.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'鸭子的脚掌不会感到冷，因为它们脚上的血管排列特殊，能回收热量。小鸭子会把出生后看到的第一个移动物体当妈妈。' },
+    { zh:'鱼',     en:'Fish',      emoji:'🐟', sound:'sounds_normalized/fish.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'鱼类是地球上最古老的脊椎动物，已经存在超过5亿年。有些鱼能改变性别，有些能发电。' },
+    { zh:'蝴蝶',   en:'Butterfly', emoji:'🦋', sound:'sounds_normalized/butterfly.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'蝴蝶用脚来尝味道！它们的翅膀上覆盖着细小的鳞片，这些鳞片能反射光线产生绚丽的色彩。' },
+    { zh:'青蛙',   en:'Frog',      emoji:'🐸', sound:'sounds_normalized/frog.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'青蛙的皮肤可以吸收水分和氧气，所以它们对环境污染特别敏感。它们是环境健康的"指示物种"。' },
+    { zh:'鲨鱼',   en:'Shark',     emoji:'🦈', sound:'sounds_normalized/shark.mp3',
+      images:[], imgLabels:['面部','全身','生活'],
+      fact:'鲨鱼比恐龙出现的时间还早，已经在地球上生存超过4亿年。它们一生会换掉超过3万颗牙齿。' }
+];
+
+let currentIndex = 0;
+let currentImageIdx = 0;
+
+const cardImage = document.getElementById('cardImage');
+const zhNameEl = document.getElementById('zhName');
+const enNameEl = document.getElementById('enName');
+const factEl = document.getElementById('fact');
+const currentIdxEl = document.getElementById('currentIdx');
+const totalCountEl = document.getElementById('totalCount');
+const animalEmojiEl = document.getElementById('animalEmoji');
+
+// ========== 音效 ==========
+function playAnimalSound() {
+    const animal = animals[currentIndex];
+    if (!animal.sound) return;
+    const audio = new Audio(animal.sound);
+    audio.volume = 0.8;
+    audio.play().catch(() => {});
+}
+
+// ========== 语音朗读 ==========
+function speak(lang) {
+    const animal = animals[currentIndex];
+    let text;
+    if (lang === 'zh') text = animal.zh;
+    else if (lang === 'en') text = animal.en;
+    else if (lang === 'fact') text = animal.fact;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
+    u.rate = 0.85;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+}
+
+// ========== 图片渲染 ==========
+function renderImage(idx) {
+    const animal = animals[currentIndex];
+    const hasImages = animal.images && animal.images.length > 0;
+
+    if (!hasImages) {
+        cardImage.className = 'card-image no-images';
+        cardImage.innerHTML = `
+            <div class="placeholder">
+                <div class="ph-emoji">${animal.emoji || '📷'}</div>
+                <div class="ph-text">待添加图片</div>
+            </div>`;
+        cardImage.onclick = function() { playAnimalSound(); };
+        return;
+    }
+
+    cardImage.className = 'card-image';
+    cardImage.innerHTML = `
+        <img id="cardImg" src="${animal.images[idx]}" alt="${animal.zh}">
+        <div class="image-indicators" id="indicators">
+            ${animal.imgLabels.map((_, i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}
+        </div>
+        <div class="image-label" id="imageLabel">${animal.imgLabels[idx]}</div>`;
+
+    cardImage.onclick = function(e) {
+        playAnimalSound();
+        if (animal.images.length > 1) {
+            renderImage((idx + 1) % animal.images.length);
+        }
+    };
+}
+
+// ========== 卡片渲染 ==========
+function renderCard() {
+    const a = animals[currentIndex];
+    zhNameEl.textContent = a.zh;
+    enNameEl.textContent = a.en;
+    factEl.textContent = a.fact;
+    currentIdxEl.textContent = currentIndex + 1;
+    totalCountEl.textContent = animals.length;
+    animalEmojiEl.textContent = a.emoji || '';
+    renderImage(currentImageIdx);
+}
+
+// ========== 导航 ==========
+function goTo(idx) {
+    if (idx < 0) idx = animals.length - 1;
+    if (idx >= animals.length) idx = 0;
+    currentIndex = idx;
+    currentImageIdx = 0;
+    renderCard();
+    setTimeout(() => speak('zh'), 300);
+}
+
+function goRandom() {
+    let ni;
+    do { ni = Math.floor(Math.random() * animals.length); }
+    while (ni === currentIndex && animals.length > 1);
+    goTo(ni);
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
+    if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+    if (e.key === ' ') { e.preventDefault(); goRandom(); }
+});
+
+// ========== 启动 ==========
+renderCard();
+</script>
+</body>
+</html>
