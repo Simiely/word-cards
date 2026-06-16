@@ -2,7 +2,7 @@
 images_test/
 images_v2/
 images_v3/
-images/
+/images/
 sounds/
 sounds_base64.json
 screenshot.png
