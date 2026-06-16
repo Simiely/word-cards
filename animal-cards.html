@@ -67,8 +67,7 @@
             -webkit-user-drag: none;
         }
         .card-image.zoom-mode img {
-            width: auto; height: auto;
-            min-width: 100%; min-height: 100%;
+            width: 100%; height: 100%;
             object-fit: cover;
         }
         .card-image img.switching { opacity: 0; }
@@ -351,6 +350,7 @@ function clampOffset() {
     const ch = cardImage.clientHeight;
     const iw = cardImg.naturalWidth || cw;
     const ih = cardImg.naturalHeight || ch;
+    // object-fit: cover 等比缩放
     const scale = Math.max(cw / iw, ch / ih);
     const displayW = iw * scale;
     const displayH = ih * scale;
@@ -377,11 +377,11 @@ function onDragMove(ex, ey, prevX, prevY) {
         const ch = cardImage.clientHeight;
         const iw = cardImg.naturalWidth || cw;
         const ih = cardImg.naturalHeight || ch;
+        // object-fit: cover 的缩放比：取 max，只有一个方向溢出
         const scale = Math.max(cw / iw, ch / ih);
-        const displayW = iw * scale;
-        const displayH = ih * scale;
-        const overflowX = displayW > cw + 2;
-        const overflowY = displayH > ch + 2;
+        const overflowX = (iw * scale) > cw + 2;
+        const overflowY = (ih * scale) > ch + 2;
+        // cover 模式下理论上不会同时溢出，但保留判断
         if (overflowX && overflowY) dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         else if (overflowX) dragAxis = 'x';
         else if (overflowY) dragAxis = 'y';
