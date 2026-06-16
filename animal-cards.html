@@ -61,7 +61,7 @@
             position: absolute; display: block;
             width: 100%; height: 100%;
             object-fit: contain;
-            transition: opacity 0.35s ease;
+            transition: opacity 0.35s ease, transform 0.3s ease;
             pointer-events: none;
             user-select: none;
             -webkit-user-drag: none;
@@ -71,6 +71,16 @@
             object-fit: cover;
         }
         .card-image img.switching { opacity: 0; }
+        .card-image .bg-img {
+            position: absolute; display: block;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: blur(30px) brightness(0.6);
+            opacity: 0.45;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
 
         /* 缩放切换按钮 */
         .zoom-toggle {
@@ -427,14 +437,48 @@ function renderImage() {
     }
 
     cardImage.className = 'card-image';
+    cardImage.style.backgroundColor = '';
     cardImage.innerHTML = `
+        <img src="${animal.image}" alt="" class="bg-img" id="bgImg">
         <img src="${animal.image}" alt="${animal.zh}" id="cardImg">
         <button class="zoom-toggle" id="zoomToggle" title="放大填充">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
         </button>`;
 
     cardImg = document.getElementById('cardImg');
+    const bgImg = document.getElementById('bgImg');
     const zoomBtn = document.getElementById('zoomToggle');
+
+    // 图片加载后提取边缘平均色设为容器背景
+    cardImg.addEventListener('load', function() {
+        if (!cardImg.naturalWidth) return;
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const iw = cardImg.naturalWidth, ih = cardImg.naturalHeight;
+            canvas.width = iw; canvas.height = ih;
+            ctx.drawImage(cardImg, 0, 0, iw, ih);
+
+            // 取最外围一圈像素
+            const top = ctx.getImageData(0, 0, iw, 1).data;
+            const bottom = ctx.getImageData(0, ih-1, iw, 1).data;
+            const left = ctx.getImageData(0, 0, 1, ih).data;
+            const right = ctx.getImageData(iw-1, 0, 1, ih).data;
+
+            let r = 0, g = 0, b = 0, count = 0;
+            const add = (data) => {
+                for (let i = 0; i < data.length; i += 4) {
+                    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                }
+            };
+            add(top); add(bottom); add(left); add(right);
+            r = Math.round(r / count);
+            g = Math.round(g / count);
+            b = Math.round(b / count);
+
+            cardImage.style.backgroundColor = `rgb(${r},${g},${b})`;
+        } catch(e) {}
+    });
 
     zoomBtn.addEventListener('click', function(e) {
         e.stopPropagation();
