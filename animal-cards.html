@@ -52,14 +52,19 @@
         .card-image {
             width: 100%; flex: 1 1 auto; min-height: 0;
             aspect-ratio: 3 / 4; max-height: 100%;
-            overflow: hidden; background: #eef2e6; position: relative; cursor: pointer;
+            overflow: hidden; background: #eef2e6; position: relative;
+            cursor: grab; touch-action: none;
         }
+        .card-image.dragging { cursor: grabbing; }
         .card-image img {
-            width: 100%; height: 100%; object-fit: cover; display: block;
+            position: absolute; display: block;
+            min-width: 100%; min-height: 100%;
             transition: opacity 0.35s ease;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
         }
         .card-image img.switching { opacity: 0; }
-        .card-image:active img { transform: scale(1.03); }
 
         .card-image.no-images {
             display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -277,7 +282,7 @@ function speakAndCopy(lang) {
     el._copyTimer = setTimeout(() => tip.classList.remove('show'), 1000);
 }
 
-// ========== 图片渲染 ==========
+// ========== 图片渲染 + 拖拽 ==========
 function renderImage() {
     const animal = animals[currentIndex];
     const hasImage = animal.image && animal.image.length > 0;
@@ -290,13 +295,148 @@ function renderImage() {
                 <div class="ph-text">待添加图片</div>
             </div>`;
         cardImage.onclick = function() { playAnimalSound(); };
+        cardImage.ontouchstart = null;
+        cardImage.ontouchmove = null;
+        cardImage.ontouchend = null;
         return;
     }
 
     cardImage.className = 'card-image';
-    cardImage.innerHTML = `<img src="${animal.image}" alt="${animal.zh}">`;
+    cardImage.innerHTML = `<img src="${animal.image}" alt="${animal.zh}" id="cardImg">`;
 
-    cardImage.onclick = function() { playAnimalSound(); };
+    const img = document.getElementById('cardImg');
+    let offsetX = 0, offsetY = 0;
+    let dragAxis = null; // 'x' | 'y' | null
+
+    function applyOffset() {
+        if (!img) return;
+        img.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
+
+    function clampOffset() {
+        if (!img || !dragAxis) return;
+        const cw = cardImage.clientWidth;
+        const ch = cardImage.clientHeight;
+        const iw = img.naturalWidth || cw;
+        const ih = img.naturalHeight || ch;
+
+        // 图片以 min-width/min-height=100% 填充，等比缩放后计算实际尺寸
+        const scale = Math.max(cw / iw, ch / ih);
+        const displayW = iw * scale;
+        const displayH = ih * scale;
+
+        const maxDX = Math.max(0, (displayW - cw) / 2);
+        const maxDY = Math.max(0, (displayH - ch) / 2);
+
+        offsetX = Math.max(-maxDX, Math.min(maxDX, offsetX));
+        offsetY = Math.max(-maxDY, Math.min(maxDY, offsetY));
+        applyOffset();
+    }
+
+    function onStart(ex, ey) {
+        dragAxis = null; // 等待首次移动来判断方向
+        img.style.transition = 'none';
+    }
+
+    function onMove(ex, ey, prevX, prevY) {
+        const dx = ex - prevX;
+        const dy = ey - prevY;
+
+        if (dragAxis === null && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+            // 判断溢出方向
+            const cw = cardImage.clientWidth;
+            const ch = cardImage.clientHeight;
+            const iw = img.naturalWidth || cw;
+            const ih = img.naturalHeight || ch;
+            const scale = Math.max(cw / iw, ch / ih);
+            const displayW = iw * scale;
+            const displayH = ih * scale;
+            const overflowX = displayW > cw + 2;
+            const overflowY = displayH > ch + 2;
+
+            if (overflowX && overflowY) {
+                dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            } else if (overflowX) {
+                dragAxis = 'x';
+            } else if (overflowY) {
+                dragAxis = 'y';
+            } else {
+                dragAxis = 'none';
+            }
+        }
+
+        if (dragAxis === 'x') offsetX += dx;
+        else if (dragAxis === 'y') offsetY += dy;
+        else return;
+
+        clampOffset();
+        return { x: ex, y: ey };
+    }
+
+    function onEnd() {
+        img.style.transition = 'transform 0.3s ease';
+        offsetX = 0;
+        offsetY = 0;
+        applyOffset();
+        dragAxis = null;
+    }
+
+    // === 鼠标事件 ===
+    let mouseDown = false, lastMX = 0, lastMY = 0;
+    cardImage.onmousedown = function(e) {
+        if (e.button !== 0) return;
+        mouseDown = true;
+        lastMX = e.clientX; lastMY = e.clientY;
+        onStart(e.clientX, e.clientY);
+        cardImage.classList.add('dragging');
+        e.preventDefault();
+    };
+    window.addEventListener('mousemove', function(e) {
+        if (!mouseDown) return;
+        const result = onMove(e.clientX, e.clientY, lastMX, lastMY);
+        if (result) { lastMX = result.x; lastMY = result.y; }
+    });
+    window.addEventListener('mouseup', function() {
+        if (!mouseDown) return;
+        mouseDown = false;
+        onEnd();
+        cardImage.classList.remove('dragging');
+    });
+
+    // === 触摸事件 ===
+    let touchId = null, lastTX = 0, lastTY = 0;
+    cardImage.ontouchstart = function(e) {
+        if (e.touches.length !== 1) { touchId = null; return; }
+        const t = e.touches[0];
+        touchId = t.identifier;
+        lastTX = t.clientX; lastTY = t.clientY;
+        onStart(t.clientX, t.clientY);
+    };
+    cardImage.ontouchmove = function(e) {
+        if (touchId === null) return;
+        const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
+        if (!t) return;
+        const result = onMove(t.clientX, t.clientY, lastTX, lastTY);
+        if (result) { lastTX = result.x; lastTY = result.y; }
+        if (dragAxis && dragAxis !== 'none') e.preventDefault();
+    };
+    cardImage.ontouchend = function(e) {
+        if (touchId === null) return;
+        const remaining = Array.from(e.touches).find(tt => tt.identifier === touchId);
+        if (remaining) return;
+        touchId = null;
+        onEnd();
+    };
+
+    // 点击：如果没拖动，播放叫声
+    let didDrag = false;
+    cardImage.addEventListener('pointerdown', () => { didDrag = false; });
+    cardImage.addEventListener('pointermove', (e) => {
+        if (dragAxis && dragAxis !== 'none') didDrag = true;
+    });
+    cardImage.addEventListener('pointerup', () => {
+        if (!didDrag) playAnimalSound();
+    });
 }
 
 // ========== 卡片渲染 ==========
