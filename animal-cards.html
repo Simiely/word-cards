@@ -338,15 +338,37 @@ function preloadOne(idx) {
                 var audio = new Audio();
                 audio.preload = 'auto';
                 audio.src = url;
-                audio.onloadeddata = oneDone;
-                audio.onerror = oneDone;
-                setTimeout(function() { if (audio.readyState < 2) oneDone(); }, 3000);
+                var audioDone = false;
+                function onAudioDone() {
+                    if (audioDone) return;
+                    audioDone = true;
+                    oneDone();
+                }
+                audio.onloadeddata = onAudioDone;
+                audio.onerror = onAudioDone;
+                // 超时兜底：3秒后如果还没完成就强制结束
+                setTimeout(function() {
+                    if (!audioDone) onAudioDone();
+                }, 3000);
             } else {
                 var img = new Image();
                 img.src = url;
-                img.onload = oneDone;
-                img.onerror = oneDone;
-                setTimeout(function() { if (!img.complete) oneDone(); }, 3000);
+                var imgDone = false;
+                function onImgDone() {
+                    if (imgDone) return;
+                    imgDone = true;
+                    oneDone();
+                }
+                img.onload = onImgDone;
+                img.onerror = onImgDone;
+                // 如果图片已在缓存中（complete=true），onload 可能不触发
+                if (img.complete) {
+                    onImgDone();
+                } else {
+                    setTimeout(function() {
+                        if (!imgDone) onImgDone();
+                    }, 3000);
+                }
             }
         }
     });
@@ -544,22 +566,20 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
 // ========== 启动 ==========
 buildOrder();
 
-// 首次启动：预加载前4个卡片（索引1~4），完成后再显示
-var initialTargets = getPreloadTargets();
-// 首次启动时，currentIndex=0，getPreloadTargets 返回 1,2,3,4, 不会包含负数
-// 取前4个作为初始预加载
-var firstBatch = initialTargets.slice(0, PRELOAD_AHEAD);
+// 首次启动：预加载当前卡片 + 后方4个卡片，完成后再显示
+// currentIndex=0，需要预加载索引 0,1,2,3,4
+var initialTargets = getPreloadTargets();  // 返回 1,2,3,4
+initialTargets.unshift(0);                 // 加上当前卡片 → 0,1,2,3,4
 
 // 显示加载动画
 showLoading(animals[displayOrder[0]].emoji || '📷');
 
-preloadBatch(firstBatch).then(function() {
+preloadBatch(initialTargets).then(function() {
     renderCard();
     hideLoading();
     setTimeout(function() { speak('zh'); }, 400);
-    // 继续预加载剩余的（前方回退用的）
-    var remaining = initialTargets.slice(PRELOAD_AHEAD);
-    if (remaining.length > 0) preloadBatch(remaining);
+    // 继续预加载前方的（回退用的）
+    maintainPreload();
 });
 </script>
 </body>
