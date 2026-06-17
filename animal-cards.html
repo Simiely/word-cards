@@ -272,45 +272,48 @@ function playAnimalSound() {
 
 // ========== 语音朗读 ==========
 let speechReady = false;
+let lastSpeakText = '';
 
-// iOS 需要在用户手势中"预热" SpeechSynthesis
+// 预加载 voices（iOS 需要）
 function warmUpSpeech() {
     if (speechReady) return;
-    const u = new SpeechSynthesisUtterance('');
-    u.volume = 0;
-    u.rate = 1;
-    speechSynthesis.speak(u);
-    speechReady = true;
+    // 加载 voices 列表来激活引擎
+    var voices = speechSynthesis.getVoices();
+    if (voices.length === 0) {
+        speechSynthesis.addEventListener('voiceschanged', function() {
+            speechReady = true;
+        }, { once: true });
+    } else {
+        speechReady = true;
+    }
 }
 
 function speak(lang) {
     try {
         warmUpSpeech();
-        const animal = animals[currentIndex];
+        var animal = animals[currentIndex];
         var text;
         if (lang === 'zh') text = animal.zh;
         else if (lang === 'en') text = animal.en;
         else if (lang === 'fact') text = animal.fact;
 
-        if (speechSynthesis.paused) speechSynthesis.resume();
-        speechSynthesis.cancel();
+        // 避免重复朗读相同内容
+        if (text === lastSpeakText && speechSynthesis.speaking) return;
+        lastSpeakText = text;
 
+        // 不 cancel，直接创建新的 utterance 并 speak
+        // iOS 上 cancel 是异步的，会导致后续 speak 被吞
         var u = new SpeechSynthesisUtterance(text);
         u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
         u.rate = 0.85;
         u.volume = 1;
-        speechSynthesis.speak(u);
 
-        setTimeout(function() {
-            if (!speechSynthesis.speaking) {
-                speechSynthesis.cancel();
-                var u2 = new SpeechSynthesisUtterance(text);
-                u2.lang = lang === 'en' ? 'en-US' : 'zh-CN';
-                u2.rate = 0.85;
-                u2.volume = 1;
-                speechSynthesis.speak(u2);
-            }
-        }, 100);
+        // 确保引擎没暂停
+        if (speechSynthesis.paused) {
+            speechSynthesis.resume();
+        }
+
+        speechSynthesis.speak(u);
     } catch(e) {}
 }
 
