@@ -525,10 +525,32 @@ function goTo(idx) {
     if (idx < 0) idx = total - 1;
     if (idx >= total) idx = 0;
 
-    currentIndex = idx;
-    renderCard();
-    setTimeout(function() { speak('zh'); }, 300);
-    maintainPreload();
+    var a = animals[displayOrder[idx]];
+    var imgReady = !a.image || preloaded[a.image];
+
+    if (imgReady) {
+        // 图片已缓存，直接切换
+        currentIndex = idx;
+        renderCard();
+        setTimeout(function() { speak('zh'); }, 300);
+        maintainPreload();
+    } else {
+        // 图片未缓存，显示加载动画等待
+        showLoading(a.emoji || '📷');
+        var navTimeout = setTimeout(function() {
+            currentIndex = idx;
+            renderCard();
+            hideLoading();
+        }, 5000);
+        preloadOne(idx).then(function() {
+            clearTimeout(navTimeout);
+            currentIndex = idx;
+            renderCard();
+            hideLoading();
+            setTimeout(function() { speak('zh'); }, 300);
+            maintainPreload();
+        });
+    }
 }
 
 function goRandom() {
