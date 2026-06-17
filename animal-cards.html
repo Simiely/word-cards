@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>动物卡片学习 - Animal Flashcards</title>
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=H1MiL7Qb"></script>
     <style>
         :root {
             --bg: #f5f0e8;
@@ -178,8 +179,6 @@
     </style>
 </head>
 <body>
-<!-- iOS SpeechSynthesis 激活按钮 -->
-<button id="speechActivator" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;">.</button>
 <div class="container">
     <div class="header">
         <div class="badge">动物卡片学习</div>
@@ -272,47 +271,18 @@ function playAnimalSound() {
     audio.play().catch(() => {});
 }
 
-// ========== 语音朗读 ==========
-let speechReady = false;
-let lastSpeakText = '';
-
-// iOS: 通过真实 button click 激活 SpeechSynthesis
-function activateSpeech() {
-    if (speechReady) return;
-    var activator = document.getElementById('speechActivator');
-    if (!activator) return;
-    // 让按钮可点击一瞬间
-    activator.style.pointerEvents = 'auto';
-    activator.focus();
-    activator.click();
-    activator.style.pointerEvents = 'none';
-    // 发一个无声 utterance 激活引擎
-    var u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    u.rate = 1;
-    speechSynthesis.speak(u);
-    speechReady = true;
-}
-
+// ========== 语音朗读（ResponsiveVoice，iOS/Android/桌面全兼容） ==========
 function speak(lang) {
     try {
-        activateSpeech();
         var animal = animals[currentIndex];
-        var text;
-        if (lang === 'zh') text = animal.zh;
-        else if (lang === 'en') text = animal.en;
-        else if (lang === 'fact') text = animal.fact;
+        var text, voice;
+        if (lang === 'zh') { text = animal.zh; voice = 'Chinese Female'; }
+        else if (lang === 'en') { text = animal.en; voice = 'UK English Female'; }
+        else if (lang === 'fact') { text = animal.fact; voice = 'Chinese Female'; }
 
-        if (text === lastSpeakText && speechSynthesis.speaking) return;
-        lastSpeakText = text;
-
-        if (speechSynthesis.paused) speechSynthesis.resume();
-
-        var u = new SpeechSynthesisUtterance(text);
-        u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
-        u.rate = 0.85;
-        u.volume = 1;
-        speechSynthesis.speak(u);
+        if (window.responsiveVoice) {
+            responsiveVoice.speak(text, voice, { rate: 0.9, volume: 1 });
+        }
     } catch(e) {}
 }
 
