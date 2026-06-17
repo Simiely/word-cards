@@ -374,9 +374,9 @@ function preloadOne(idx) {
     });
 }
 
-// 预加载窗口：后方4个（即将看到的）+ 前方2个（回退用的）
-var PRELOAD_AHEAD = 4;    // 当前索引之后预加载数
-var PRELOAD_BEHIND = 2;   // 当前索引之前预加载数
+// 预加载窗口：后方3个（即将看到的）+ 前方1个（回退用的）
+var PRELOAD_AHEAD = 3;    // 当前索引之后预加载数
+var PRELOAD_BEHIND = 1;   // 当前索引之前预加载数
 var preloadingSet = {};   // 正在预加载中的索引
 
 // 获取需要预加载的索引列表（不包含当前）
@@ -566,10 +566,10 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
 // ========== 启动 ==========
 buildOrder();
 
-// 首次启动：预加载当前卡片 + 后方4个卡片，完成后再显示
-// currentIndex=0，需要预加载索引 0,1,2,3,4
-var initialTargets = getPreloadTargets();  // 返回 1,2,3,4
-initialTargets.unshift(0);                 // 加上当前卡片 → 0,1,2,3,4
+// 首次启动：预加载当前卡片 + 后方3个卡片 = 共4个，完成后再显示
+// currentIndex=0，需要预加载索引 0,1,2,3
+var initialTargets = getPreloadTargets();  // 返回 1,2,3
+initialTargets.unshift(0);                 // 加上当前卡片 → 0,1,2,3
 
 // 显示加载动画
 showLoading(animals[displayOrder[0]].emoji || '📷');
