@@ -417,9 +417,7 @@ function onDragMove(ex, ey, prevX, prevY) {
 
 function onDragEnd() {
     if (!zoomEnabled) return;
-    if (cardImg) cardImg.style.transition = 'transform 0.3s ease';
-    offsetX = 0; offsetY = 0;
-    applyOffset();
+    if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
     dragAxis = null;
 }
 
