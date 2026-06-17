@@ -447,7 +447,7 @@ function showCard(index) {
     loadingDot.classList.add('show');
 
     // 清理旧事件
-    if (popCleanup) { popCleanup(); popCleanup = null; }
+    if (popImageCleanup) { popImageCleanup(); popImageCleanup = null; }
 
     preloadAnimal(index).then(function() {
         loadingDot.classList.remove('show');
