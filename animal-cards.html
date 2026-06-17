@@ -352,23 +352,45 @@ function preloadOne(idx) {
     });
 }
 
-// 确保当前索引前后各2个（共4个）已预加载
-var PRELOAD_WINDOW = 2;
+// 预加载窗口：后方4个（即将看到的）+ 前方2个（回退用的）
+var PRELOAD_AHEAD = 4;    // 当前索引之后预加载数
+var PRELOAD_BEHIND = 2;   // 当前索引之前预加载数
 var preloadingSet = {};   // 正在预加载中的索引
 
-function maintainPreload() {
+// 获取需要预加载的索引列表（不包含当前）
+function getPreloadTargets() {
+    var targets = [];
     var total = displayOrder.length;
-    // 预加载范围：当前索引前后各 PRELOAD_WINDOW 个
-    for (var offset = -PRELOAD_WINDOW; offset <= PRELOAD_WINDOW; offset++) {
-        if (offset === 0) continue; // 跳过当前
-        var idx = currentIndex + offset;
-        if (idx < 0 || idx >= total) continue;
-        if (preloadingSet[idx]) continue; // 已在加载中
-        preloadingSet[idx] = true;
-        preloadOne(idx).then(function() {
-            preloadingSet[idx] = false;
-        });
+    // 后方（即将翻到的）
+    for (var i = 1; i <= PRELOAD_AHEAD; i++) {
+        var idx = currentIndex + i;
+        if (idx < total) targets.push(idx);
     }
+    // 前方（回退用的）
+    for (var i = 1; i <= PRELOAD_BEHIND; i++) {
+        var idx = currentIndex - i;
+        if (idx >= 0) targets.push(idx);
+    }
+    return targets;
+}
+
+// 预加载指定索引列表，返回 Promise（所有完成后 resolve）
+function preloadBatch(indices) {
+    var promises = [];
+    for (var i = 0; i < indices.length; i++) {
+        var idx = indices[i];
+        if (preloadingSet[idx]) continue;
+        preloadingSet[idx] = true;
+        promises.push(preloadOne(idx).then(function() {
+            preloadingSet[idx] = false;
+        }));
+    }
+    return Promise.all(promises);
+}
+
+// 维护预加载窗口（后台静默）
+function maintainPreload() {
+    preloadBatch(getPreloadTargets());
 }
 
 // ========== 音效 ==========
@@ -507,9 +529,25 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
 
 // ========== 启动 ==========
 buildOrder();
-renderCard();
-maintainPreload();
-setTimeout(function() { speak('zh'); }, 400);
+
+// 首次启动：预加载前4个卡片（索引1~4），完成后再显示
+var initialTargets = getPreloadTargets();
+// 首次启动时，currentIndex=0，getPreloadTargets 返回 1,2,3,4, 不会包含负数
+// 取前4个作为初始预加载
+var firstBatch = initialTargets.slice(0, PRELOAD_AHEAD);
+
+// 显示加载动画
+loadingOverlay.classList.remove('hidden', 'fade-out');
+loadingEmoji.textContent = animals[displayOrder[0]].emoji || '📷';
+
+preloadBatch(firstBatch).then(function() {
+    renderCard();
+    loadingOverlay.classList.add('hidden');
+    setTimeout(function() { speak('zh'); }, 400);
+    // 继续预加载剩余的（前方回退用的）
+    var remaining = initialTargets.slice(PRELOAD_AHEAD);
+    if (remaining.length > 0) preloadBatch(remaining);
+});
 </script>
 </body>
 </html>
