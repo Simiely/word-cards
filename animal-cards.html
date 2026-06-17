@@ -792,100 +792,90 @@ function renderImage() {
         }, 150);
     }, { passive: false });
 
-    // === 鼠标拖拽 ===
-    let mouseDown = false, lastMX = 0, lastMY = 0;
-    cardImage.onmousedown = function(e) {
-        if (e.button !== 0) return;
-        if (e.target === zoomBtn) return;
-        mouseDown = true;
-        lastMX = e.clientX; lastMY = e.clientY;
-        onDragStart();
-        if (zoomEnabled) { cardImage.classList.add('dragging'); e.preventDefault(); }
-    };
+    // === 统一拖拽（Pointer Events + setPointerCapture） ===
+    let pointerDown = false, lastPX = 0, lastPY = 0;
+    let pointerId = null;
 
-    // === 触摸拖拽 + 双指缩放 ===
-    let touchId = null, lastTX = 0, lastTY = 0;
+    // 记录拖拽起始偏移，用于判断是否播放叫声
+    let dragStartOX = 0, dragStartOY = 0;
+
+    function onPointerDown(e) {
+        if (e.target === zoomBtn) return;
+        pointerDown = true;
+        pointerId = e.pointerId;
+        lastPX = e.clientX; lastPY = e.clientY;
+        dragStartOX = offsetX; dragStartOY = offsetY;
+        cardImage.setPointerCapture(e.pointerId);
+        onDragStart();
+        if (zoomEnabled) { cardImage.classList.add('dragging'); }
+    }
+
+    function onPointerMove(e) {
+        if (!pointerDown || e.pointerId !== pointerId) return;
+        const result = onDragMove(e.clientX, e.clientY, lastPX, lastPY);
+        if (result) { lastPX = result.x; lastPY = result.y; }
+    }
+
+    function onPointerUp(e) {
+        if (!pointerDown || e.pointerId !== pointerId) return;
+        pointerDown = false;
+        pointerId = null;
+        onDragEnd();
+        cardImage.classList.remove('dragging');
+        try { cardImage.releasePointerCapture(e.pointerId); } catch(ex) {}
+        // 没有拖拽时播放叫声
+        if (offsetX === dragStartOX && offsetY === dragStartOY) {
+            playAnimalSound();
+        }
+    }
+
+    cardImage.addEventListener('pointerdown', onPointerDown);
+    cardImage.addEventListener('pointermove', onPointerMove);
+    cardImage.addEventListener('pointerup', onPointerUp);
+    cardImage.addEventListener('pointercancel', onPointerUp);
+
+    // === 触摸双指缩放 ===
     let pinchActive = false;
 
-    cardImage.ontouchstart = function(e) {
+    function onTouchStart(e) {
         if (e.target === zoomBtn) return;
         if (e.touches.length === 2) {
-            // 双指缩放
-            touchId = null;
             pinchActive = true;
             onPinchStart(e.touches[0], e.touches[1]);
             return;
         }
-        if (e.touches.length !== 1) { touchId = null; pinchActive = false; return; }
         pinchActive = false;
         pinchStartDist = 0;
-        const t = e.touches[0];
-        touchId = t.identifier;
-        lastTX = t.clientX; lastTY = t.clientY;
-        onDragStart();
-    };
-    cardImage.ontouchmove = function(e) {
+    }
+
+    function onTouchMove(e) {
         if (e.touches.length === 2 && pinchActive) {
             onPinchMove(e.touches[0], e.touches[1]);
             e.preventDefault();
-            return;
         }
-        if (touchId === null || pinchActive) return;
-        const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
-        if (!t) return;
-        const result = onDragMove(t.clientX, t.clientY, lastTX, lastTY);
-        if (result) { lastTX = result.x; lastTY = result.y; e.preventDefault(); }
-    };
-    cardImage.ontouchend = function(e) {
+    }
+
+    function onTouchEnd(e) {
         if (pinchActive && e.touches.length < 2) {
             pinchActive = false;
             onPinchEnd();
-            return;
         }
-        if (touchId === null) return;
-        const remaining = Array.from(e.touches).find(tt => tt.identifier === touchId);
-        if (remaining) return;
-        touchId = null;
-        onDragEnd();
-        cardImage.classList.remove('dragging');
-    };
+    }
 
-    // === 全局鼠标移动/释放 ===
-    const onMM = function(e) {
-        if (!mouseDown) return;
-        const result = onDragMove(e.clientX, e.clientY, lastMX, lastMY);
-        if (result) { lastMX = result.x; lastMY = result.y; }
-    };
-    const onMU = function() {
-        if (!mouseDown) return;
-        mouseDown = false;
-        onDragEnd();
-        cardImage.classList.remove('dragging');
-    };
-    window.addEventListener('mousemove', onMM);
-    window.addEventListener('mouseup', onMU);
+    cardImage.addEventListener('touchstart', onTouchStart, { passive: false });
+    cardImage.addEventListener('touchmove', onTouchMove, { passive: false });
+    cardImage.addEventListener('touchend', onTouchEnd);
 
-    // 清理旧监听（通过闭包持有引用，下次 renderImage 时自动失效）
+    // 清理函数
     cardImage._cleanup = function() {
-        window.removeEventListener('mousemove', onMM);
-        window.removeEventListener('mouseup', onMU);
+        cardImage.removeEventListener('pointerdown', onPointerDown);
+        cardImage.removeEventListener('pointermove', onPointerMove);
+        cardImage.removeEventListener('pointerup', onPointerUp);
+        cardImage.removeEventListener('pointercancel', onPointerUp);
+        cardImage.removeEventListener('touchstart', onTouchStart);
+        cardImage.removeEventListener('touchmove', onTouchMove);
+        cardImage.removeEventListener('touchend', onTouchEnd);
     };
-
-    // 点击：没拖动时播放叫声
-    let didDrag = false;
-    let dragStartOX = 0, dragStartOY = 0;
-    cardImage.addEventListener('pointerdown', function(e) {
-        if (e.target === zoomBtn) return;
-        didDrag = false;
-        dragStartOX = offsetX; dragStartOY = offsetY;
-    });
-    cardImage.addEventListener('pointermove', function() {
-        if (offsetX !== dragStartOX || offsetY !== dragStartOY) didDrag = true;
-    });
-    cardImage.addEventListener('pointerup', function(e) {
-        if (e.target === zoomBtn) return;
-        if (!didDrag) playAnimalSound();
-    });
 }
 
 // ========== 卡片渲染 ==========
