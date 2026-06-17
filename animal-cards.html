@@ -455,7 +455,11 @@ function getTouchCenter(t1, t2) {
 }
 
 function onPinchStart(t1, t2) {
-    if (!zoomEnabled) return;
+    // 非zoom模式下双指缩放，自动进入zoom模式
+    if (!zoomEnabled) {
+        setZoomMode(true);
+        // setZoomMode 会重置 zoomScale，需要重新获取
+    }
     pinchStartDist = getTouchDist(t1, t2);
     pinchStartScale = zoomScale;
     pinchStartOffsetX = offsetX;
@@ -466,7 +470,7 @@ function onPinchStart(t1, t2) {
 }
 
 function onPinchMove(t1, t2) {
-    if (!zoomEnabled || pinchStartDist === 0) return;
+    if (pinchStartDist === 0) return;
     const newDist = getTouchDist(t1, t2);
     const ratio = newDist / pinchStartDist;
     const newScale = Math.max(0.5, Math.min(4, pinchStartScale * ratio));
