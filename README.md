@@ -94,6 +94,48 @@ word-cards/
 
 ---
 
+## 语音文件生成
+
+使用 Edge TTS 生成中文/英文/科普语音：
+
+```bash
+pip install edge-tts
+
+# 中文名称
+edge-tts --voice zh-CN-XiaoxiaoNeural --text "狮子" --write-media animal/speech_zh/lion.mp3
+
+# 英文名称
+edge-tts --voice en-US-AriaNeural --text "Lion" --write-media animal/speech_en/lion.mp3
+
+# 科普描述
+edge-tts --voice zh-CN-XiaoxiaoNeural --text "狮子是唯一群居的猫科动物..." --write-media animal/speech_fact/lion.mp3
+```
+
+### 多音字处理
+
+Edge TTS 对部分多音字可能读错声调（如"蛙"读四声）。解决方案：
+
+1. **拆分拼接**：将词拆为单字分别生成，用 pydub 拼接
+   ```bash
+   edge-tts --voice zh-CN-XiaoxiaoNeural --text "青" --write-media qing.mp3
+   edge-tts --voice zh-CN-XiaoxiaoNeural --text "挖" --write-media wa.mp3
+   python3 -c "
+   from pydub import AudioSegment
+   (AudioSegment.from_mp3('qing.mp3') + AudioSegment.from_mp3('wa.mp3')).export('frog.mp3', format='mp3')
+   "
+   ```
+
+2. **从 fact 语音截取**：fact 描述中的读音通常正确，可从中截取
+   ```bash
+   python3 -c "
+   from pydub import AudioSegment
+   fact = AudioSegment.from_mp3('animal/speech_fact/frog.mp3')
+   fact[100:500].export('animal/speech_zh/frog.mp3', format='mp3')
+   "
+   ```
+
+---
+
 ## 本地运行
 
 ```bash
