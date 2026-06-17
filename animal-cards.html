@@ -187,9 +187,9 @@
         <div class="card-image" id="cardImage"></div>
         <div class="card-body">
             <div class="animal-emoji" id="animalEmoji"></div>
-            <div class="zh-name" id="zhName"></div>
-            <div class="en-name" id="enName"></div>
-            <div class="fact" id="fact"></div>
+            <div class="zh-name" id="zhName" ontouchend="speakAndCopy('zh');return false;"></div>
+            <div class="en-name" id="enName" ontouchend="speakAndCopy('en');return false;"></div>
+            <div class="fact" id="fact" ontouchend="speak('fact');return false;"></div>
         </div>
     </div>
     <div class="nav">
@@ -732,21 +732,6 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
     if (e.key === 'ArrowRight') goTo(currentIndex + 1);
     if (e.key === ' ') { e.preventDefault(); goRandom(); }
-});
-
-// ========== 文字点击发音 ==========
-// 使用 pointerdown 确保在移动端用户手势中触发 SpeechSynthesis
-zhNameEl.addEventListener('pointerdown', function(e) {
-    e.preventDefault();
-    speakAndCopy('zh');
-});
-enNameEl.addEventListener('pointerdown', function(e) {
-    e.preventDefault();
-    speakAndCopy('en');
-});
-factEl.addEventListener('pointerdown', function(e) {
-    e.preventDefault();
-    speak('fact');
 });
 
 // ========== 启动 ==========
