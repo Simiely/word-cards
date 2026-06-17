@@ -187,9 +187,9 @@
         <div class="card-image" id="cardImage"></div>
         <div class="card-body">
             <div class="animal-emoji" id="animalEmoji"></div>
-            <div class="zh-name" id="zhName" ontouchend="speakAndCopy('zh');return false;"></div>
-            <div class="en-name" id="enName" ontouchend="speakAndCopy('en');return false;"></div>
-            <div class="fact" id="fact" ontouchend="speak('fact');return false;"></div>
+            <div class="zh-name" id="zhName" ontouchend="(function(){alert('zh touched');speakAndCopy('zh');})();return false;" onclick="speakAndCopy('zh')"></div>
+            <div class="en-name" id="enName" ontouchend="(function(){alert('en touched');speakAndCopy('en');})();return false;" onclick="speakAndCopy('en')"></div>
+            <div class="fact" id="fact" ontouchend="(function(){alert('fact touched');speak('fact');})();return false;" onclick="speak('fact')"></div>
         </div>
     </div>
     <div class="nav">
