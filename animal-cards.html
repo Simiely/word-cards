@@ -307,59 +307,33 @@ function currentAnimal() {
     return animals[realIdx];
 }
 
-// 预加载指定索引的动物资源
-// 策略：图片优先加载，图片完成后 Promise resolve；音频后台静默加载
+// 预加载指定索引的动物图片，返回 Promise
 function preloadOne(idx) {
     return new Promise(function(resolve) {
-        const a = animals[displayOrder[idx]];
-        const urls = { img: a.image || null, audio: [] };
-        if (a.speech_zh) urls.audio.push(a.speech_zh);
-        if (a.speech_en) urls.audio.push(a.speech_en);
-        if (a.speech_fact) urls.audio.push(a.speech_fact);
+        var a = animals[displayOrder[idx]];
+        if (!a.image) { resolve(); return; }
+        if (preloaded[a.image]) { resolve(); return; }
+        preloaded[a.image] = true;
 
-        var imgResolved = false;
-        var imgDone = false;
-
-        // 优先加载图片
-        if (urls.img && !preloaded[urls.img]) {
-            preloaded[urls.img] = true;
-            var img = new Image();
-            img.src = urls.img;
-            img.onload = function() {
-                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
-            };
-            img.onerror = function() {
-                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
-            };
-            if (img.complete) {
-                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
-            } else {
-                setTimeout(function() {
-                    if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
-                }, 3000);
-            }
-        } else {
-            imgResolved = true;
+        var img = new Image();
+        var done = false;
+        function finish() {
+            if (done) return;
+            done = true;
+            resolve();
         }
-
-        // 音频后台静默加载，不阻塞 resolve
-        for (var i = 0; i < urls.audio.length; i++) {
-            var src = urls.audio[i];
-            if (!preloaded[src]) {
-                preloaded[src] = true;
-                var audio = new Audio();
-                audio.preload = 'auto';
-                audio.src = src;
-            }
-        }
-
-        // 如果没有图片，直接 resolve
-        if (imgResolved) resolve();
+        img.onload = finish;
+        img.onerror = finish;
+        img.src = a.image;
+        // 缓存命中时 onload 可能不触发
+        if (img.complete) finish();
+        // 超时兜底
+        setTimeout(finish, 5000);
     });
 }
 
-// 后台补充加载音频（更彻底地触发浏览器缓存）
-function preloadAudioOnly(idx) {
+// 后台静默加载音频（不阻塞）
+function preloadAudio(idx) {
     var a = animals[displayOrder[idx]];
     var srcs = [];
     if (a.speech_zh) srcs.push(a.speech_zh);
@@ -397,22 +371,26 @@ function getPreloadTargets() {
     return targets;
 }
 
-// 并行预加载指定索引列表，返回 Promise（全部图片完成后 resolve）
+// 并行预加载图片列表，返回 Promise
 function preloadBatch(indices) {
     var promises = [];
     for (var i = 0; i < indices.length; i++) {
-        var idx = indices[i];
-        if (preloadingSet[idx]) continue;
-        preloadingSet[idx] = true;
-        promises.push(preloadOne(idx).then(function() {
-            preloadingSet[idx] = false;
-        }));
+        (function(idx) {
+            if (preloadingSet[idx]) return;
+            preloadingSet[idx] = true;
+            promises.push(
+                preloadOne(idx).then(function() {
+                    preloadingSet[idx] = false;
+                    preloadAudio(idx);
+                })
+            );
+        })(indices[i]);
     }
     if (promises.length === 0) return Promise.resolve();
     return Promise.all(promises);
 }
 
-// 维护预加载窗口（后台静默，串行加载）
+// 维护预加载窗口（后台静默）
 function maintainPreload() {
     var targets = getPreloadTargets();
     var toLoad = [];
