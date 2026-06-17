@@ -290,12 +290,13 @@ const loadingEmoji = document.getElementById('loadingEmoji');
 
 // ========== 分组预加载 ==========
 const GROUP_SIZE = 6;
-let displayOrder = [];     // 展示顺序（全局索引数组，已随机打乱并补足）
+let displayOrder = [];     // 展示顺序（全局索引数组，已随机打乱）
 let groups = [];           // 分组后的索引数组: [[5,2,...], [3,8,...], ...]
 let groupIndex = -1;       // 当前所在组
 let loadedAssets = {};     // 已预加载的资源缓存: { url: true }
+let preloadQueue = [];     // 待预加载的组（避免重复加载）
 
-// 生成分组：随机打乱 → 按6个一组切 → 最后一组不足则从前面补
+// 生成分组：随机打乱所有动物 → 按6个一组切 → 最后一组可能不足6个
 function buildGroups() {
     const total = animals.length;
     // Fisher-Yates 洗牌
@@ -305,24 +306,10 @@ function buildGroups() {
         const tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
     }
 
+    // 按 GROUP_SIZE 分组，不补足
     groups = [];
     for (let i = 0; i < shuffled.length; i += GROUP_SIZE) {
         groups.push(shuffled.slice(i, i + GROUP_SIZE));
-    }
-
-    // 最后一组不足6个：从已出现的所有索引中随机补足
-    const lastGroup = groups[groups.length - 1];
-    if (lastGroup.length < GROUP_SIZE) {
-        const seen = new Set(shuffled);
-        const need = GROUP_SIZE - lastGroup.length;
-        const pool = Array.from(seen);
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
-        }
-        for (let i = 0; i < need && i < pool.length; i++) {
-            lastGroup.push(pool[i]);
-        }
     }
 
     // 展平为展示顺序
@@ -332,6 +319,9 @@ function buildGroups() {
             displayOrder.push(groups[g][i]);
         }
     }
+
+    // 重置预加载队列
+    preloadQueue = [];
 }
 
 // 判断当前索引是否需要切换到新组
@@ -419,6 +409,17 @@ function hideLoading() {
     setTimeout(function() {
         loadingOverlay.classList.add('hidden');
     }, 500);
+}
+
+// 后台静默预加载指定组（如果还没加载过）
+function preloadGroupSilent(groupIdx) {
+    if (groupIdx < 0 || groupIdx >= groups.length) return;
+    if (preloadQueue.indexOf(groupIdx) >= 0) return; // 已经在队列中
+    preloadQueue.push(groupIdx);
+    preloadGroup(groupIdx).then(function() {
+        var pos = preloadQueue.indexOf(groupIdx);
+        if (pos >= 0) preloadQueue.splice(pos, 1);
+    });
 }
 
 // ========== 音效 ==========
@@ -878,21 +879,42 @@ function goTo(idx) {
     if (idx < 0) idx = total - 1;
     if (idx >= total) idx = 0;
 
-    const newGroup = getGroupForIndex(idx);
-    // 如果跨组了，需要预加载
+    var newGroup = getGroupForIndex(idx);
+
+    // 如果跨组，且新组还没加载完 → 显示加载动画等待
     if (newGroup !== groupIndex) {
         groupIndex = newGroup;
-        const group = groups[newGroup];
-        const firstAnimal = animals[group[0]];
-        showLoading(firstAnimal.emoji || '📷');
 
-        preloadGroup(newGroup).then(function() {
+        // 检查新组是否已预加载（资源已在缓存中）
+        var urls = getGroupAssetUrls(newGroup);
+        var allCached = true;
+        for (var i = 0; i < urls.length; i++) {
+            if (!loadedAssets[urls[i]]) { allCached = false; break; }
+        }
+
+        if (allCached) {
+            // 已预加载好，直接切换
             currentIndex = idx;
             renderCard();
-            hideLoading();
-            setTimeout(function() { speak('zh'); }, 400);
-        });
+            setTimeout(function() { speak('zh'); }, 300);
+            // 后台预加载下一组
+            preloadGroupSilent(newGroup + 1);
+        } else {
+            // 还没加载好，显示动画等待
+            var group = groups[newGroup];
+            var firstAnimal = animals[group[0]];
+            showLoading(firstAnimal.emoji || '📷');
+            preloadGroup(newGroup).then(function() {
+                currentIndex = idx;
+                renderCard();
+                hideLoading();
+                setTimeout(function() { speak('zh'); }, 400);
+                // 后台预加载下一组
+                preloadGroupSilent(newGroup + 1);
+            });
+        }
     } else {
+        // 同组内切换，直接渲染
         currentIndex = idx;
         renderCard();
         setTimeout(function() { speak('zh'); }, 300);
@@ -923,11 +945,18 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
 
 // ========== 启动 ==========
 buildGroups();
-// 首页属于第0组，预加载第0组
 groupIndex = 0;
 var firstGroup = groups[0];
 showLoading(animals[firstGroup[0]].emoji || '📷');
-preloadGroup(0).then(function() {
+
+// 首屏：预加载第0组（必须）+ 第1组（后台）
+var promises = [preloadGroup(0)];
+if (groups.length > 1) {
+    preloadGroupSilent(1);
+}
+
+// 第0组加载完就显示（不等待第1组）
+promises[0].then(function() {
     renderCard();
     hideLoading();
     setTimeout(function() { speak('zh'); }, 400);
