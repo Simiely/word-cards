@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>选择动物 - Animal Select</title>
+    <style>
+        :root {
+            --bg: #f5f0e8;
+            --card-bg: #ffffff;
+            --primary: #4a7c59;
+            --accent: #e8a87c;
+            --text: #3c3c3c;
+            --radius: 24px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { overflow-y: auto; }
+        body {
+            font-family: 'Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+            background: var(--bg);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            padding: calc(12px + var(--safe-top)) 12px calc(12px + var(--safe-bottom)) 12px;
+            min-height: 100dvh;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            max-width: 800px; margin: 0 auto 12px; padding: 0 4px;
+        }
+        .top-bar .title { font-size: 18px; font-weight: 700; color: var(--text); }
+        .top-bar .btn-back {
+            display: inline-block; background: var(--card-bg); color: var(--text);
+            font-size: 14px; padding: 8px 18px; border-radius: 20px;
+            border: 2px solid #e0dcd4; cursor: pointer; text-decoration: none;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .top-bar .btn-back:active { border-color: var(--primary); color: var(--primary); }
+
+        /* 瀑布流网格 */
+        .grid {
+            max-width: 800px; margin: 0 auto;
+            display: grid; gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+        }
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        }
+        @media (max-width: 360px) {
+            .grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        }
+
+        .grid-item {
+            aspect-ratio: 1;
+            border-radius: 16px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer; position: relative;
+            transition: transform 0.15s, filter 0.3s, opacity 0.3s;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .grid-item:active { transform: scale(0.94); }
+        .grid-item .item-emoji {
+            font-size: clamp(28px, 8vw, 44px); line-height: 1.2;
+            transition: filter 0.3s;
+        }
+        .grid-item .item-name {
+            font-size: clamp(10px, 2.5vw, 13px); color: rgba(255,255,255,0.9);
+            font-weight: 600; margin-top: 2px; letter-spacing: 0.5px;
+            transition: opacity 0.3s;
+        }
+        /* 已访问过的动物 - 灰度 */
+        .grid-item.visited {
+            filter: grayscale(0.7);
+            opacity: 0.55;
+        }
+
+        /* 卡片弹出层 */
+        .card-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000;
+            display: flex; flex-direction: column;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .card-overlay.active { opacity: 1; pointer-events: auto; }
+        .card-overlay .card-wrapper {
+            flex-shrink: 0;
+            width: 100%; max-width: 520px;
+            margin: 20px auto 0; padding: 0 12px;
+        }
+        .card-overlay .card {
+            width: 100%;
+            background: var(--card-bg); border-radius: var(--radius);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .card-overlay .card-image {
+            width: 100%; aspect-ratio: 3/4;
+            overflow: hidden; background: #eef2e6; position: relative;
+            touch-action: none;
+        }
+        .card-overlay .card-image img {
+            position: absolute; display: block;
+            width: 100%; height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .card-overlay .card-body {
+            flex-shrink: 0; padding: 14px 24px 16px;
+            text-align: left; position: relative;
+        }
+        .card-overlay .card-body .animal-emoji {
+            position: absolute; top: 14px; right: 24px;
+            font-size: clamp(36px, 7vw, 48px); line-height: 1;
+            pointer-events: none; opacity: 0.85;
+        }
+        .card-overlay .card-body .zh-name {
+            font-size: clamp(28px, 5vw, 36px); font-weight: 700; color: var(--text);
+            cursor: pointer; line-height: 1.3; padding-right: 60px;
+        }
+        .card-overlay .card-body .zh-name:active { color: var(--primary); }
+        .card-overlay .card-body .en-name {
+            font-size: clamp(17px, 3.5vw, 20px); font-weight: 400; color: #888;
+            cursor: pointer; margin-top: 8px; line-height: 1.4; padding-right: 60px;
+        }
+        .card-overlay .card-body .en-name:active { color: var(--accent); }
+        .card-overlay .card-body .fact {
+            font-size: clamp(12px, 2.2vw, 14px); color: #888; margin-top: 12px;
+            line-height: 1.65; cursor: pointer;
+        }
+        .card-overlay .card-body .fact:active { color: var(--primary); }
+        .card-overlay .btn-close {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(0,0,0,0.5); border: none;
+            color: #fff; font-size: 20px; line-height: 36px; text-align: center;
+            cursor: pointer; backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-overlay .btn-close:active { background: rgba(0,0,0,0.7); }
+
+        /* 卡片下方的网格（滚动区域） */
+        .card-overlay .grid-below {
+            flex-shrink: 0; width: 100%; max-width: 800px;
+            margin: 16px auto 40px; padding: 0 12px;
+        }
+
+        /* 加载动画 */
+        .loading-dot {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 2000; font-size: 60px;
+            animation: breathe 1.2s ease-in-out infinite;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
+        .loading-dot.show { opacity: 1; }
+        @keyframes breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="title">选择一个动物</div>
+    <a class="btn-back" href="animal-cards.html">← 返回</a>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<!-- 卡片弹出层 -->
+<div class="card-overlay" id="cardOverlay">
+    <div class="card-wrapper">
+        <div class="card" id="popCard">
+            <div class="card-image" id="popCardImage">
+                <button class="btn-close" id="btnClose">✕</button>
+            </div>
+            <div class="card-body">
+                <div class="animal-emoji" id="popEmoji"></div>
+                <div class="zh-name" id="popZhName"></div>
+                <div class="en-name" id="popEnName"></div>
+                <div class="fact" id="popFact"></div>
+            </div>
+        </div>
+    </div>
+    <div class="grid-below">
+        <div class="grid" id="gridBelow"></div>
+    </div>
+</div>
+
+<div class="loading-dot" id="loadingDot">🦁</div>
+
+<script>
+// ========== 动物数据 ==========
+const animals = [
+    { zh:'狮子', en:'Lion', emoji:'🦁', sound:'', speech_zh:'animal/speech_zh/lion.mp3', speech_en:'animal/speech_en/lion.mp3', speech_fact:'animal/speech_fact/lion.mp3', image:'animal/images/lion.jpg',
+      fact:'狮子是唯一群居的猫科动物，一个狮群通常由1-2头雄狮和几头母狮组成。雄狮的鬃毛越浓密越受母狮青睐。' },
+    { zh:'大象', en:'Elephant', emoji:'🐘', sound:'', speech_zh:'animal/speech_zh/elephant.mp3', speech_en:'animal/speech_en/elephant.mp3', speech_fact:'animal/speech_fact/elephant.mp3', image:'animal/images/elephant.jpg',
+      fact:'大象是陆地上最大的哺乳动物。它们的鼻子由超过4万块肌肉组成，既能拔起大树也能捡起一粒花生。' },
+    { zh:'熊猫', en:'Panda', emoji:'🐼', sound:'', speech_zh:'animal/speech_zh/panda.mp3', speech_en:'animal/speech_en/panda.mp3', speech_fact:'animal/speech_fact/panda.mp3', image:'animal/images/panda.jpg',
+      fact:'大熊猫是中国国宝，虽然属于食肉目，但99%的食物都是竹子，每天要花12-16小时进食。' },
+    { zh:'老虎', en:'Tiger', emoji:'🐯', sound:'', speech_zh:'animal/speech_zh/tiger.mp3', speech_en:'animal/speech_en/tiger.mp3', speech_fact:'animal/speech_fact/tiger.mp3', image:'animal/images/tiger.jpg',
+      fact:'老虎是世界上最大的猫科动物，每只老虎身上的条纹都是独一无二的，就像人类的指纹一样。' },
+    { zh:'长颈鹿', en:'Giraffe', emoji:'🦒', sound:'', speech_zh:'animal/speech_zh/giraffe.mp3', speech_en:'animal/speech_en/giraffe.mp3', speech_fact:'animal/speech_fact/giraffe.mp3', image:'animal/images/giraffe.jpg',
+      fact:'长颈鹿是地球上最高的陆地动物，脖子虽然很长，但颈椎骨数量和人类一样都是7块。' },
+    { zh:'斑马', en:'Zebra', emoji:'🦓', sound:'', speech_zh:'animal/speech_zh/zebra.mp3', speech_en:'animal/speech_en/zebra.mp3', speech_fact:'animal/speech_fact/zebra.mp3', image:'animal/images/zebra.jpg',
+      fact:'斑马的黑白条纹不仅是伪装，还能防蚊虫叮咬。每只斑马的条纹图案都是独一无二的。' },
+    { zh:'企鹅', en:'Penguin', emoji:'🐧', sound:'', speech_zh:'animal/speech_zh/penguin.mp3', speech_en:'animal/speech_en/penguin.mp3', speech_fact:'animal/speech_fact/penguin.mp3', image:'animal/images/penguin.jpg',
+      fact:'企鹅是鸟类中的游泳高手，帝企鹅可以潜入500米深的海水中，憋气超过20分钟。' },
+    { zh:'海豚', en:'Dolphin', emoji:'🐬', sound:'', speech_zh:'animal/speech_zh/dolphin.mp3', speech_en:'animal/speech_en/dolphin.mp3', speech_fact:'animal/speech_fact/dolphin.mp3', image:'animal/images/dolphin.jpg',
+      fact:'海豚是非常聪明的海洋哺乳动物，它们用超声波定位和交流，睡觉时大脑一半休息一半保持清醒。' },
+    { zh:'猴子', en:'Monkey', emoji:'🐵', sound:'', speech_zh:'animal/speech_zh/monkey.mp3', speech_en:'animal/speech_en/monkey.mp3', speech_fact:'animal/speech_fact/monkey.mp3', image:'animal/images/monkey.jpg',
+      fact:'猴子是灵长类动物中种类最丰富的一类，它们有复杂的社会结构，会使用工具和互相梳理毛发。' },
+    { zh:'兔子', en:'Rabbit', emoji:'🐰', sound:'', speech_zh:'animal/speech_zh/rabbit.mp3', speech_en:'animal/speech_en/rabbit.mp3', speech_fact:'animal/speech_fact/rabbit.mp3', image:'animal/images/rabbit.jpg',
+      fact:'兔子的耳朵可以转动270度，帮助它们听到远处的危险。它们高兴时会跳起来在空中转身，这叫binky。' },
+    { zh:'猫', en:'Cat', emoji:'🐱', sound:'', speech_zh:'animal/speech_zh/cat.mp3', speech_en:'animal/speech_en/cat.mp3', speech_fact:'animal/speech_fact/cat.mp3', image:'animal/images/cat.jpg',
+      fact:'猫是世界上最受欢迎的宠物之一。它们呼噜呼噜的声音不仅能表示开心，还能帮助骨骼愈合。' },
+    { zh:'狗', en:'Dog', emoji:'🐶', sound:'', speech_zh:'animal/speech_zh/dog.mp3', speech_en:'animal/speech_en/dog.mp3', speech_fact:'animal/speech_fact/dog.mp3', image:'animal/images/dog.jpg',
+      fact:'狗是人类最早驯化的动物，它们的嗅觉比人类灵敏1万到10万倍，能嗅出疾病和情绪变化。' },
+    { zh:'马', en:'Horse', emoji:'🐴', sound:'', speech_zh:'animal/speech_zh/horse.mp3', speech_en:'animal/speech_en/horse.mp3', speech_fact:'animal/speech_fact/horse.mp3', image:'animal/images/horse.jpg',
+      fact:'马可以站着睡觉，但需要躺下才能进入深度睡眠。它们的视野差不多达到360度。' },
+    { zh:'牛', en:'Cow', emoji:'🐮', sound:'', speech_zh:'animal/speech_zh/cow.mp3', speech_en:'animal/speech_en/cow.mp3', speech_fact:'animal/speech_fact/cow.mp3', image:'animal/images/cow.jpg',
+      fact:'牛有四个胃室来消化草料，它们能看到颜色，而且对红色其实并不敏感。' },
+    { zh:'羊', en:'Sheep', emoji:'🐑', sound:'', speech_zh:'animal/speech_zh/sheep.mp3', speech_en:'animal/speech_en/sheep.mp3', speech_fact:'animal/speech_fact/sheep.mp3', image:'animal/images/sheep.jpg',
+      fact:'绵羊有极好的记忆力，能记住50多张面孔长达两年。它们还能通过面部表情识别同伴的情绪。' },
+    { zh:'鸡', en:'Chicken', emoji:'🐔', sound:'', speech_zh:'animal/speech_zh/chicken.mp3', speech_en:'animal/speech_en/chicken.mp3', speech_fact:'animal/speech_fact/chicken.mp3', image:'animal/images/chicken.jpg',
+      fact:'鸡是世界上最常见的鸟类，全球养殖数量超过250亿只。它们能用超过30种不同的叫声来交流。' },
+    { zh:'鸭子', en:'Duck', emoji:'🦆', sound:'', speech_zh:'animal/speech_zh/duck.mp3', speech_en:'animal/speech_en/duck.mp3', speech_fact:'animal/speech_fact/duck.mp3', image:'animal/images/duck.jpg',
+      fact:'鸭子的脚掌不会感到冷，因为它们脚上的血管排列特殊，能回收热量。小鸭子会把出生后看到的第一个移动物体当妈妈。' },
+    { zh:'鱼', en:'Fish', emoji:'🐟', sound:'', speech_zh:'animal/speech_zh/fish.mp3', speech_en:'animal/speech_en/fish.mp3', speech_fact:'animal/speech_fact/fish.mp3', image:'animal/images/fish.jpg',
+      fact:'鱼类是地球上最古老的脊椎动物，已经存在超过5亿年。有些鱼能改变性别，有些能发电。' },
+    { zh:'蝴蝶', en:'Butterfly', emoji:'🦋', sound:'', speech_zh:'animal/speech_zh/butterfly.mp3', speech_en:'animal/speech_en/butterfly.mp3', speech_fact:'animal/speech_fact/butterfly.mp3', image:'animal/images/butterfly.jpg',
+      fact:'蝴蝶用脚来尝味道！它们的翅膀上覆盖着细小的鳞片，这些鳞片能反射光线产生绚丽的色彩。' },
+    { zh:'青蛙', en:'Frog', emoji:'🐸', sound:'', speech_zh:'animal/speech_zh/frog.mp3', speech_en:'animal/speech_en/frog.mp3', speech_fact:'animal/speech_fact/frog.mp3', image:'animal/images/frog.jpg',
+      fact:'青蛙的皮肤可以吸收水分和氧气，所以它们对环境污染特别敏感。它们是环境健康的"指示物种"。' },
+    { zh:'鲨鱼', en:'Shark', emoji:'🦈', sound:'', speech_zh:'animal/speech_zh/shark.mp3', speech_en:'animal/speech_en/shark.mp3', speech_fact:'animal/speech_fact/shark.mp3', image:'animal/images/shark.jpg',
+      fact:'鲨鱼比恐龙出现的时间还早，已经在地球上生存超过4亿年。它们一生会换掉超过3万颗牙齿。' }
+];
+
+// ========== DOM 引用 ==========
+const gridEl = document.getElementById('grid');
+const gridBelowEl = document.getElementById('gridBelow');
+const cardOverlay = document.getElementById('cardOverlay');
+const popCardImage = document.getElementById('popCardImage');
+const popEmoji = document.getElementById('popEmoji');
+const popZhName = document.getElementById('popZhName');
+const popEnName = document.getElementById('popEnName');
+const popFact = document.getElementById('popFact');
+const btnClose = document.getElementById('btnClose');
+const loadingDot = document.getElementById('loadingDot');
+
+// ========== 访问记录（localStorage） ==========
+function getVisited() {
+    try {
+        var raw = localStorage.getItem('animal_select_visited');
+        return raw ? JSON.parse(raw) : [];
+    } catch(e) { return []; }
+}
+function markVisited(index) {
+    var visited = getVisited();
+    if (visited.indexOf(index) < 0) {
+        visited.push(index);
+        localStorage.setItem('animal_select_visited', JSON.stringify(visited));
+    }
+    updateVisitedClass();
+}
+
+function updateVisitedClass() {
+    var visited = getVisited();
+    var items = document.querySelectorAll('.grid-item');
+    for (var i = 0; i < items.length; i++) {
+        var idx = parseInt(items[i].getAttribute('data-index'));
+        if (visited.indexOf(idx) >= 0) {
+            items[i].classList.add('visited');
+        }
+    }
+}
+
+// ========== 提取 emoji 平均色 ==========
+// 用 canvas 渲染 emoji，取非透明像素的平均色
+var emojiColorCache = {};
+function getEmojiAvgColor(emoji, callback) {
+    if (emojiColorCache[emoji]) {
+        callback(emojiColorCache[emoji]);
+        return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.font = '48px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, 32, 32);
+
+    var imageData = ctx.getImageData(0, 0, 64, 64).data;
+    var r = 0, g = 0, b = 0, count = 0;
+    for (var i = 0; i < imageData.length; i += 4) {
+        var alpha = imageData[i + 3];
+        if (alpha > 50) {
+            r += imageData[i];
+            g += imageData[i + 1];
+            b += imageData[i + 2];
+            count++;
+        }
+    }
+    var color;
+    if (count > 0) {
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+    } else {
+        r = 180; g = 180; b = 180; // fallback
+    }
+    // 混合70%黑色
+    r = Math.round(r * 0.3);
+    g = Math.round(g * 0.3);
+    b = Math.round(b * 0.3);
+    color = 'rgb(' + r + ',' + g + ',' + b + ')';
+    emojiColorCache[emoji] = color;
+    callback(color);
+}
+
+// ========== 构建网格 ==========
+function buildGrid(container, onClickHandler) {
+    container.innerHTML = '';
+    for (var i = 0; i < animals.length; i++) {
+        (function(idx) {
+            var a = animals[idx];
+            var item = document.createElement('div');
+            item.className = 'grid-item';
+            item.setAttribute('data-index', idx);
+            getEmojiAvgColor(a.emoji, function(color) {
+                item.style.backgroundColor = color;
+            });
+            item.innerHTML = '<div class="item-emoji">' + a.emoji + '</div><div class="item-name">' + a.zh + '</div>';
+            item.addEventListener('click', function() { onClickHandler(idx); });
+            container.appendChild(item);
+        })(i);
+    }
+}
+
+// ========== 预加载单个动物的资源 ==========
+function preloadAnimal(index) {
+    return new Promise(function(resolve) {
+        var a = animals[index];
+        var urls = [];
+        if (a.image) urls.push(a.image);
+        if (a.speech_zh) urls.push(a.speech_zh);
+        if (a.speech_en) urls.push(a.speech_en);
+        if (a.speech_fact) urls.push(a.speech_fact);
+        if (a.sound) urls.push(a.sound);
+
+        if (urls.length === 0) { resolve(); return; }
+        var pending = urls.length;
+        function oneDone() { pending--; if (pending <= 0) resolve(); }
+        for (var i = 0; i < urls.length; i++) {
+            var url = urls[i];
+            var isAudio = /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url);
+            if (isAudio) {
+                var audio = new Audio();
+                audio.preload = 'auto';
+                audio.src = url;
+                audio.onloadeddata = oneDone;
+                audio.onerror = oneDone;
+                setTimeout(function() { if (audio.readyState < 2) oneDone(); }, 3000);
+            } else {
+                var img = new Image();
+                img.src = url;
+                img.onload = oneDone;
+                img.onerror = oneDone;
+                setTimeout(function() { if (!img.complete) oneDone(); }, 3000);
+            }
+        }
+    });
+}
+
+// ========== 语音 ==========
+var speechAudio = null;
+function speak(lang, animal) {
+    try {
+        var src;
+        if (lang === 'zh') src = animal.speech_zh;
+        else if (lang === 'en') src = animal.speech_en;
+        else if (lang === 'fact') src = animal.speech_fact;
+        if (!src) return;
+        if (speechAudio) { speechAudio.pause(); speechAudio = null; }
+        speechAudio = new Audio(src);
+        speechAudio.volume = 1;
+        speechAudio.play().catch(function(){});
+    } catch(e) {}
+}
+
+// ========== 卡片弹出 ==========
+var currentPopIndex = -1;
+
+function showCard(index) {
+    currentPopIndex = index;
+    var a = animals[index];
+    loadingDot.textContent = a.emoji;
+    loadingDot.classList.add('show');
+
+    preloadAnimal(index).then(function() {
+        loadingDot.classList.remove('show');
+
+        // 填充卡片内容
+        popEmoji.textContent = a.emoji;
+        popZhName.textContent = a.zh;
+        popEnName.textContent = a.en;
+        popFact.textContent = a.fact;
+
+        // 渲染图片
+        popCardImage.style.backgroundColor = '';
+        popCardImage.innerHTML = '<img src="' + a.image + '" alt="' + a.zh + '" id="popImg"><button class="btn-close" id="btnClose2">✕</button>';
+        var popImg = document.getElementById('popImg');
+        var btnClose2 = document.getElementById('btnClose2');
+
+        // 边缘平均色
+        popImg.addEventListener('load', function() {
+            if (!popImg.naturalWidth) return;
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var iw = popImg.naturalWidth, ih = popImg.naturalHeight;
+                canvas.width = iw; canvas.height = ih;
+                ctx.drawImage(popImg, 0, 0, iw, ih);
+                var top = ctx.getImageData(0, 0, iw, 1).data;
+                var bottom = ctx.getImageData(0, ih-1, iw, 1).data;
+                var left = ctx.getImageData(0, 0, 1, ih).data;
+                var right = ctx.getImageData(iw-1, 0, 1, ih).data;
+                var r = 0, g = 0, b = 0, count = 0;
+                function add(data) {
+                    for (var i = 0; i < data.length; i += 4) {
+                        r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                    }
+                }
+                add(top); add(bottom); add(left); add(right);
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+                popCardImage.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+            } catch(e) {}
+        });
+
+        btnClose2.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeCard();
+        });
+
+        // 关闭按钮也加到 overlay 的点击空白区域
+        cardOverlay.addEventListener('click', function(e) {
+            if (e.target === cardOverlay) closeCard();
+        });
+
+        cardOverlay.classList.add('active');
+        markVisited(index);
+
+        // 重建下方网格
+        buildGrid(gridBelowEl, function(idx) {
+            showCard(idx);
+        });
+        updateVisitedClass();
+
+        // 自动朗读
+        setTimeout(function() { speak('zh', a); }, 400);
+    });
+}
+
+function closeCard() {
+    cardOverlay.classList.remove('active');
+    // 更新主网格的 visited 状态
+    updateVisitedClass();
+}
+
+btnClose.addEventListener('click', function(e) {
+    e.stopPropagation();
+    closeCard();
+});
+
+// 点击卡片文字发音
+document.getElementById('popCard').addEventListener('click', function(e) {
+    var target = e.target;
+    if (currentPopIndex < 0) return;
+    var a = animals[currentPopIndex];
+    if (target === popZhName) { speak('zh', a); }
+    else if (target === popEnName) { speak('en', a); }
+    else if (target === popFact) { speak('fact', a); }
+});
+
+// ========== 启动 ==========
+buildGrid(gridEl, function(idx) {
+    showCard(idx);
+});
+updateVisitedClass();
+</script>
+</body>
+</html>
