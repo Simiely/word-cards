@@ -338,9 +338,11 @@ function preloadAudio(idx) {
     for (var i = 0; i < srcs.length; i++) {
         if (!preloaded[srcs[i]]) {
             preloaded[srcs[i]] = true;
-            var audio = new Audio();
-            audio.preload = 'auto';
-            audio.src = srcs[i];
+            (function(src) {
+                var audio = new Audio();
+                audio.preload = 'auto';
+                audio.src = src;
+            })(srcs[i]);
         }
     }
 }
@@ -386,14 +388,19 @@ function preloadBatch(indices) {
     return Promise.all(promises);
 }
 
-// 维护预加载窗口（后台静默）
+// 维护预加载窗口（后台静默，带防抖）
+var maintainTimer = null;
 function maintainPreload() {
-    var targets = getPreloadTargets();
-    var toLoad = [];
-    for (var i = 0; i < targets.length; i++) {
-        if (!preloadingSet[targets[i]]) toLoad.push(targets[i]);
-    }
-    if (toLoad.length > 0) preloadBatch(toLoad);
+    if (maintainTimer) clearTimeout(maintainTimer);
+    maintainTimer = setTimeout(function() {
+        maintainTimer = null;
+        var targets = getPreloadTargets();
+        var toLoad = [];
+        for (var i = 0; i < targets.length; i++) {
+            if (!preloadingSet[targets[i]]) toLoad.push(targets[i]);
+        }
+        if (toLoad.length > 0) preloadBatch(toLoad);
+    }, 200);
 }
 
 // 显示加载动画
@@ -482,10 +489,15 @@ function renderImage() {
 
     cardImage.className = 'card-image';
     cardImage.style.backgroundColor = '';
-    cardImage.innerHTML = '<img src="' + animal.image + '" alt="' + animal.zh + '" id="cardImg"><button class="zoom-toggle" id="zoomToggle" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button>';
+    cardImage.innerHTML = '<img src="' + animal.image + '" alt="' + animal.zh + '" id="cardImg" style="opacity:0"><button class="zoom-toggle" id="zoomToggle" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button>';
 
     var cardImgEl = document.getElementById('cardImg');
     var zoomBtn = document.getElementById('zoomToggle');
+
+    // 图片加载完成后淡入
+    cardImgEl.onload = function() { cardImgEl.style.opacity = '1'; };
+    cardImgEl.onerror = function() { cardImgEl.style.opacity = '1'; };
+    if (cardImgEl.complete) cardImgEl.style.opacity = '1';
 
     // 初始化图片交互模块
     imageInteractionCleanup = initImageInteraction({
