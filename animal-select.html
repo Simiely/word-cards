@@ -151,12 +151,6 @@
         }
         .card-overlay .btn-close:active { background: rgba(0,0,0,0.7); }
 
-        /* 卡片下方的网格（滚动区域） */
-        .card-overlay .grid-below {
-            flex-shrink: 0; width: 100%; max-width: 800px;
-            margin: 16px auto 40px; padding: 0 12px;
-        }
-
         /* 加载动画 */
         .loading-dot {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -195,9 +189,6 @@
                 <div class="fact" id="popFact"></div>
             </div>
         </div>
-    </div>
-    <div class="grid-below">
-        <div class="grid" id="gridBelow"></div>
     </div>
 </div>
 
@@ -252,7 +243,6 @@ const animals = [
 
 // ========== DOM 引用 ==========
 const gridEl = document.getElementById('grid');
-const gridBelowEl = document.getElementById('gridBelow');
 const cardOverlay = document.getElementById('cardOverlay');
 const popCardImage = document.getElementById('popCardImage');
 const popEmoji = document.getElementById('popEmoji');
@@ -467,11 +457,6 @@ function showCard(index) {
 
         cardOverlay.classList.add('active');
         markVisited(index);
-
-        // 重建下方网格
-        buildGrid(gridBelowEl, function(idx) {
-            showCard(idx);
-        });
         updateVisitedClass();
 
         // 自动朗读
