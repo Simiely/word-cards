@@ -53,20 +53,26 @@
             pointer-events: none;
         }
         .header .btn-select {
-            display: inline-block; background: transparent; color: var(--primary);
-            font-size: 14px; padding: 8px 18px; border-radius: 20px; letter-spacing: 0.5px;
-            border: 2px solid var(--primary); cursor: pointer; text-decoration: none;
+            display: inline-block; background: var(--card-bg); color: var(--text);
+            font-size: 14px; padding: 8px 18px; border-radius: 20px;
+            border: 2px solid #e0dcd4; cursor: pointer; text-decoration: none;
             transition: all 0.2s; font-weight: 600; white-space: nowrap;
             -webkit-tap-highlight-color: transparent;
             flex-shrink: 0;
         }
-        .header .btn-select:active { background: var(--primary); color: #fff; }
-        .header .counter { font-size: 13px; color: #999; font-weight: 500; padding: 4px 0 2px; }
-        .header .btn-home {
-            color: #999; text-decoration: none; font-size: 12px; font-weight: 500;
-            transition: color 0.2s;
+        .header .btn-select:active { border-color: var(--primary); color: var(--primary); }
+        .header .btn-group {
+            display: flex; gap: 8px; flex-shrink: 0;
         }
-        .header .btn-home:active { color: var(--primary); }
+        .header .btn-home {
+            display: inline-block; background: var(--card-bg); color: var(--text);
+            font-size: 14px; padding: 8px 18px; border-radius: 20px;
+            border: 2px solid #e0dcd4; cursor: pointer; text-decoration: none;
+            font-weight: 600; transition: all 0.2s; white-space: nowrap;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .header .btn-home:active { border-color: var(--primary); color: var(--primary); }
 
         .card {
             width: 100%; flex: 1 1 auto; min-height: 0;
@@ -197,6 +203,7 @@
             .header .badge { font-size: 12px; padding: 6px 14px; }
             .header .category-title { font-size: 18px; }
             .header .btn-select { font-size: 12px; padding: 6px 14px; }
+            .header .btn-home { font-size: 12px; padding: 6px 14px; }
             .header .counter { font-size: 11px; }
             .card { margin: 6px 0; }
             .card-body { padding: 10px 16px 12px; min-height: 100px; }
@@ -237,9 +244,12 @@
         <div class="header-top">
             <div class="badge">卡片模式</div>
             <div class="category-title">动物</div>
-            <a class="btn-select" href="animal-select.html">浏览模式</a>
+            <div class="btn-group">
+                <a class="btn-home" href="index.html">📚 首页</a>
+                <a class="btn-select" href="animal-select.html">浏览模式</a>
+            </div>
         </div>
-        <div class="counter"><a class="btn-home" href="index.html">🏠 首页</a> &nbsp; <span id="currentIdx">1</span> / <span id="totalCount">20</span></div>
+        <div class="counter"><span id="currentIdx">1</span> / <span id="totalCount">20</span></div>
     </div>
     <div class="card" id="card">
         <div class="card-image" id="cardImage"></div>
