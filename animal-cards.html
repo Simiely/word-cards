@@ -175,9 +175,34 @@
             .nav button { padding: 9px 16px; font-size: 13px; }
             .nav { gap: 8px; }
         }
+
+        /* ========== 加载动画遮罩 ========== */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        .loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+        .loading-overlay.hidden { display: none; }
+        .loading-emoji {
+            font-size: 80px;
+            animation: breathe 1.2s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+<!-- 加载动画遮罩 -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-emoji" id="loadingEmoji">🦁</div>
+</div>
+
 <div class="container">
     <div class="header">
         <div class="badge">动物卡片学习</div>
@@ -260,14 +285,149 @@ const factEl = document.getElementById('fact');
 const currentIdxEl = document.getElementById('currentIdx');
 const totalCountEl = document.getElementById('totalCount');
 const animalEmojiEl = document.getElementById('animalEmoji');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingEmoji = document.getElementById('loadingEmoji');
+
+// ========== 分组预加载 ==========
+const GROUP_SIZE = 6;
+let displayOrder = [];     // 展示顺序（全局索引数组，已随机打乱并补足）
+let groups = [];           // 分组后的索引数组: [[5,2,...], [3,8,...], ...]
+let groupIndex = -1;       // 当前所在组
+let loadedAssets = {};     // 已预加载的资源缓存: { url: true }
+
+// 生成分组：随机打乱 → 按6个一组切 → 最后一组不足则从前面补
+function buildGroups() {
+    const total = animals.length;
+    // Fisher-Yates 洗牌
+    const shuffled = Array.from({length: total}, function(_, i) { return i; });
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+    }
+
+    groups = [];
+    for (let i = 0; i < shuffled.length; i += GROUP_SIZE) {
+        groups.push(shuffled.slice(i, i + GROUP_SIZE));
+    }
+
+    // 最后一组不足6个：从已出现的所有索引中随机补足
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup.length < GROUP_SIZE) {
+        const seen = new Set(shuffled);
+        const need = GROUP_SIZE - lastGroup.length;
+        const pool = Array.from(seen);
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+        }
+        for (let i = 0; i < need && i < pool.length; i++) {
+            lastGroup.push(pool[i]);
+        }
+    }
+
+    // 展平为展示顺序
+    displayOrder = [];
+    for (let g = 0; g < groups.length; g++) {
+        for (let i = 0; i < groups[g].length; i++) {
+            displayOrder.push(groups[g][i]);
+        }
+    }
+}
+
+// 判断当前索引是否需要切换到新组
+function getGroupForIndex(idx) {
+    for (let g = 0; g < groups.length; g++) {
+        const start = g * GROUP_SIZE;
+        const end = start + groups[g].length;
+        if (idx >= start && idx < end) return g;
+    }
+    return groups.length - 1;
+}
+
+// 获取当前展示的动物数据
+function currentAnimal() {
+    const realIdx = displayOrder[currentIndex];
+    return animals[realIdx];
+}
+
+// 获取当前组需要预加载的所有资源 URL
+function getGroupAssetUrls(groupIdx) {
+    const urls = [];
+    const group = groups[groupIdx];
+    if (!group) return urls;
+    for (let i = 0; i < group.length; i++) {
+        const a = animals[group[i]];
+        if (a.image) urls.push(a.image);
+        if (a.speech_zh) urls.push(a.speech_zh);
+        if (a.speech_en) urls.push(a.speech_en);
+        if (a.speech_fact) urls.push(a.speech_fact);
+        if (a.sound) urls.push(a.sound);
+    }
+    return urls;
+}
+
+// 预加载一组资源
+function preloadGroup(groupIdx) {
+    return new Promise(function(resolve) {
+        const urls = getGroupAssetUrls(groupIdx);
+        const toLoad = [];
+        for (let i = 0; i < urls.length; i++) {
+            const url = urls[i];
+            if (!loadedAssets[url]) {
+                toLoad.push(url);
+                loadedAssets[url] = true;
+            }
+        }
+        if (toLoad.length === 0) { resolve(); return; }
+
+        let pending = toLoad.length;
+        function oneDone() {
+            pending--;
+            if (pending <= 0) resolve();
+        }
+        for (let i = 0; i < toLoad.length; i++) {
+            const url = toLoad[i];
+            const isAudio = /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url);
+            if (isAudio) {
+                const audio = new Audio();
+                audio.preload = 'auto';
+                audio.src = url;
+                audio.onloadeddata = oneDone;
+                audio.onerror = oneDone;
+                // 超时兜底
+                setTimeout(function() { if (audio.readyState < 2) oneDone(); }, 3000);
+            } else {
+                const img = new Image();
+                img.src = url;
+                img.onload = oneDone;
+                img.onerror = oneDone;
+                setTimeout(function() { if (!img.complete) oneDone(); }, 3000);
+            }
+        }
+    });
+}
+
+// 显示加载动画
+function showLoading(emoji) {
+    loadingEmoji.textContent = emoji || '📷';
+    loadingOverlay.classList.remove('hidden', 'fade-out');
+}
+
+// 隐藏加载动画
+function hideLoading() {
+    loadingOverlay.classList.add('fade-out');
+    setTimeout(function() {
+        loadingOverlay.classList.add('hidden');
+    }, 500);
+}
 
 // ========== 音效 ==========
 function playAnimalSound() {
-    const animal = animals[currentIndex];
+    const animal = currentAnimal();
     if (!animal.sound) return;
     const audio = new Audio(animal.sound);
     audio.volume = 0.8;
-    audio.play().catch(() => {});
+    audio.play().catch(function() {});
 }
 
 // ========== 语音朗读（预录制 MP3，全平台兼容） ==========
@@ -275,7 +435,7 @@ var speechAudio = null;
 
 function speak(lang) {
     try {
-        var animal = animals[currentIndex];
+        var animal = currentAnimal();
         var src;
         if (lang === 'zh') src = animal.speech_zh;
         else if (lang === 'en') src = animal.speech_en;
@@ -292,7 +452,7 @@ function speak(lang) {
 function speakAndCopy(lang) {
     try { speak(lang); } catch(e) {}
     try {
-        const animal = animals[currentIndex];
+        const animal = currentAnimal();
         const text = lang === 'zh' ? animal.zh : animal.en;
         const el = lang === 'zh' ? zhNameEl : enNameEl;
 
@@ -488,7 +648,7 @@ function onPinchEnd() {
 }
 
 function renderImage() {
-    const animal = animals[currentIndex];
+    const animal = currentAnimal();
     const hasImage = animal.image && animal.image.length > 0;
     zoomEnabled = false;
     zoomScale = 1;
@@ -702,33 +862,52 @@ function renderImage() {
 
 // ========== 卡片渲染 ==========
 function renderCard() {
-    const a = animals[currentIndex];
+    const a = currentAnimal();
     zhNameEl.textContent = a.zh;
     enNameEl.textContent = a.en;
     factEl.textContent = a.fact;
     currentIdxEl.textContent = currentIndex + 1;
-    totalCountEl.textContent = animals.length;
+    totalCountEl.textContent = displayOrder.length;
     animalEmojiEl.textContent = a.emoji || '';
     renderImage();
 }
 
 // ========== 导航 ==========
 function goTo(idx) {
-    if (idx < 0) idx = animals.length - 1;
-    if (idx >= animals.length) idx = 0;
-    currentIndex = idx;
-    renderCard();
-    setTimeout(() => speak('zh'), 300);
+    const total = displayOrder.length;
+    if (idx < 0) idx = total - 1;
+    if (idx >= total) idx = 0;
+
+    const newGroup = getGroupForIndex(idx);
+    // 如果跨组了，需要预加载
+    if (newGroup !== groupIndex) {
+        groupIndex = newGroup;
+        const group = groups[newGroup];
+        const firstAnimal = animals[group[0]];
+        showLoading(firstAnimal.emoji || '📷');
+
+        preloadGroup(newGroup).then(function() {
+            currentIndex = idx;
+            renderCard();
+            hideLoading();
+            setTimeout(function() { speak('zh'); }, 400);
+        });
+    } else {
+        currentIndex = idx;
+        renderCard();
+        setTimeout(function() { speak('zh'); }, 300);
+    }
 }
 
 function goRandom() {
     let ni;
-    do { ni = Math.floor(Math.random() * animals.length); }
-    while (ni === currentIndex && animals.length > 1);
+    const total = displayOrder.length;
+    do { ni = Math.floor(Math.random() * total); }
+    while (ni === currentIndex && total > 1);
     goTo(ni);
 }
 
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
     if (e.key === 'ArrowRight') goTo(currentIndex + 1);
     if (e.key === ' ') { e.preventDefault(); goRandom(); }
@@ -743,7 +922,16 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
 });
 
 // ========== 启动 ==========
-renderCard();
+buildGroups();
+// 首页属于第0组，预加载第0组
+groupIndex = 0;
+var firstGroup = groups[0];
+showLoading(animals[firstGroup[0]].emoji || '📷');
+preloadGroup(0).then(function() {
+    renderCard();
+    hideLoading();
+    setTimeout(function() { speak('zh'); }, 400);
+});
 </script>
 </body>
 </html>
