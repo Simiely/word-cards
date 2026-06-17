@@ -336,7 +336,7 @@ function preloadOne(idx) {
             } else {
                 setTimeout(function() {
                     if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
-                }, 5000);
+                }, 3000);
             }
         } else {
             imgResolved = true;
@@ -397,20 +397,19 @@ function getPreloadTargets() {
     return targets;
 }
 
-// 串行预加载指定索引列表，返回 Promise（全部图片完成后 resolve）
+// 并行预加载指定索引列表，返回 Promise（全部图片完成后 resolve）
 function preloadBatch(indices) {
-    var i = 0;
-    function next() {
-        if (i >= indices.length) return Promise.resolve();
-        var idx = indices[i++];
-        if (preloadingSet[idx]) return next();
+    var promises = [];
+    for (var i = 0; i < indices.length; i++) {
+        var idx = indices[i];
+        if (preloadingSet[idx]) continue;
         preloadingSet[idx] = true;
-        return preloadOne(idx).then(function() {
+        promises.push(preloadOne(idx).then(function() {
             preloadingSet[idx] = false;
-            return next();
-        });
+        }));
     }
-    return next();
+    if (promises.length === 0) return Promise.resolve();
+    return Promise.all(promises);
 }
 
 // 维护预加载窗口（后台静默，串行加载）
@@ -582,11 +581,18 @@ initialTargets.unshift(0);                 // 加上当前卡片 → 0,1,2,3
 // 显示加载动画
 showLoading(animals[displayOrder[0]].emoji || '📷');
 
+// 总超时兜底：8秒后无论如何显示卡片
+var bootTimeout = setTimeout(function() {
+    renderCard();
+    hideLoading();
+}, 8000);
+
 preloadBatch(initialTargets).then(function() {
+    clearTimeout(bootTimeout);
     renderCard();
     hideLoading();
     setTimeout(function() { speak('zh'); }, 400);
-    // 继续预加载前方的（回退用的）
+    // 后台维护预加载窗口
     maintainPreload();
 });
 </script>
