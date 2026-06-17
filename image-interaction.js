@@ -221,6 +221,8 @@ function initImageInteraction(config) {
 
     function onPDown(e) {
         if (e.target === zoomBtn) return;
+        // 跳过关闭按钮
+        if (e.target.closest && e.target.closest('.btn-close')) return;
         pointerDown = true;
         pointerId = e.pointerId;
         lastPX = e.clientX; lastPY = e.clientY;

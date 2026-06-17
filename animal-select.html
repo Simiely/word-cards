@@ -203,22 +203,6 @@
         .card-overlay .zoom-toggle:active { transform: scale(0.9); background: rgba(0,0,0,0.65); }
         .card-overlay .zoom-toggle svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; }
 
-        /* 卡片翻页按钮 */
-        .card-overlay .nav-arrow {
-            position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
-            width: 40px; height: 40px; border-radius: 50%;
-            background: rgba(0,0,0,0.35); border: none;
-            color: #fff; font-size: 20px; cursor: pointer;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
-        .card-overlay .nav-arrow:active { background: rgba(0,0,0,0.6); transform: translateY(-50%) scale(0.9); }
-        .card-overlay .nav-prev { left: -8px; }
-        .card-overlay .nav-next { right: -8px; }
-
         /* 加载动画 */
         .loading-dot {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -464,26 +448,10 @@ function showCard(index) {
         // 渲染图片
         popCardImage.className = 'card-image';
         popCardImage.style.backgroundColor = '';
-        popCardImage.innerHTML = '<button class="nav-arrow nav-prev" id="popNavPrev">&lt;</button><button class="nav-arrow nav-next" id="popNavNext">&gt;</button><img src="' + a.image + '" alt="' + a.zh + '" id="popImg"><button class="zoom-toggle" id="popZoomBtn" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button><button class="btn-close" id="btnClose2">✕</button>';
+        popCardImage.innerHTML = '<img src="' + a.image + '" alt="' + a.zh + '" id="popImg"><button class="zoom-toggle" id="popZoomBtn" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button><button class="btn-close" id="btnClose2">✕</button>';
         var popImg = document.getElementById('popImg');
         var popZoomBtn = document.getElementById('popZoomBtn');
         var btnClose2 = document.getElementById('btnClose2');
-        var navPrev = document.getElementById('popNavPrev');
-        var navNext = document.getElementById('popNavNext');
-
-        // 翻页按钮
-        navPrev.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var newIdx = currentPopIndex - 1;
-            if (newIdx < 0) newIdx = animals.length - 1;
-            showCard(newIdx);
-        });
-        navNext.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var newIdx = currentPopIndex + 1;
-            if (newIdx >= animals.length) newIdx = 0;
-            showCard(newIdx);
-        });
 
         // 初始化图片交互模块
         popImageCleanup = initImageInteraction({
@@ -546,21 +514,6 @@ buildGrid(gridEl, function(idx) {
     showCard(idx);
 });
 updateVisitedClass();
-
-// ========== 键盘翻页（弹出卡片激活时） ==========
-document.addEventListener('keydown', function(e) {
-    if (!cardOverlay.classList.contains('active')) return;
-    if (e.key === 'ArrowLeft') {
-        var newIdx = currentPopIndex - 1;
-        if (newIdx < 0) newIdx = animals.length - 1;
-        showCard(newIdx);
-    }
-    if (e.key === 'ArrowRight') {
-        var newIdx = currentPopIndex + 1;
-        if (newIdx >= animals.length) newIdx = 0;
-        showCard(newIdx);
-    }
-});
 </script>
 </body>
 </html>
