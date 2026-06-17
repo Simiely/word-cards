@@ -307,71 +307,72 @@ function currentAnimal() {
     return animals[realIdx];
 }
 
-// 预加载指定索引的动物资源（图片+语音），返回 Promise
+// 预加载指定索引的动物资源
+// 策略：图片优先加载，图片完成后 Promise resolve；音频后台静默加载
 function preloadOne(idx) {
     return new Promise(function(resolve) {
         const a = animals[displayOrder[idx]];
-        const urls = [];
-        if (a.image) urls.push(a.image);
-        if (a.speech_zh) urls.push(a.speech_zh);
-        if (a.speech_en) urls.push(a.speech_en);
-        if (a.speech_fact) urls.push(a.speech_fact);
+        const urls = { img: a.image || null, audio: [] };
+        if (a.speech_zh) urls.audio.push(a.speech_zh);
+        if (a.speech_en) urls.audio.push(a.speech_en);
+        if (a.speech_fact) urls.audio.push(a.speech_fact);
 
-        const toLoad = [];
-        for (var i = 0; i < urls.length; i++) {
-            if (!preloaded[urls[i]]) {
-                toLoad.push(urls[i]);
-                preloaded[urls[i]] = true;
+        var imgResolved = false;
+        var imgDone = false;
+
+        // 优先加载图片
+        if (urls.img && !preloaded[urls.img]) {
+            preloaded[urls.img] = true;
+            var img = new Image();
+            img.src = urls.img;
+            img.onload = function() {
+                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
+            };
+            img.onerror = function() {
+                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
+            };
+            if (img.complete) {
+                if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
+            } else {
+                setTimeout(function() {
+                    if (!imgDone) { imgDone = true; imgResolved = true; resolve(); }
+                }, 5000);
             }
+        } else {
+            imgResolved = true;
         }
-        if (toLoad.length === 0) { resolve(); return; }
 
-        var pending = toLoad.length;
-        function oneDone() {
-            pending--;
-            if (pending <= 0) resolve();
-        }
-        for (var i = 0; i < toLoad.length; i++) {
-            var url = toLoad[i];
-            var isAudio = /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url);
-            if (isAudio) {
+        // 音频后台静默加载，不阻塞 resolve
+        for (var i = 0; i < urls.audio.length; i++) {
+            var src = urls.audio[i];
+            if (!preloaded[src]) {
+                preloaded[src] = true;
                 var audio = new Audio();
                 audio.preload = 'auto';
-                audio.src = url;
-                var audioDone = false;
-                function onAudioDone() {
-                    if (audioDone) return;
-                    audioDone = true;
-                    oneDone();
-                }
-                audio.onloadeddata = onAudioDone;
-                audio.onerror = onAudioDone;
-                // 超时兜底：3秒后如果还没完成就强制结束
-                setTimeout(function() {
-                    if (!audioDone) onAudioDone();
-                }, 3000);
-            } else {
-                var img = new Image();
-                img.src = url;
-                var imgDone = false;
-                function onImgDone() {
-                    if (imgDone) return;
-                    imgDone = true;
-                    oneDone();
-                }
-                img.onload = onImgDone;
-                img.onerror = onImgDone;
-                // 如果图片已在缓存中（complete=true），onload 可能不触发
-                if (img.complete) {
-                    onImgDone();
-                } else {
-                    setTimeout(function() {
-                        if (!imgDone) onImgDone();
-                    }, 3000);
-                }
+                audio.src = src;
             }
         }
+
+        // 如果没有图片，直接 resolve
+        if (imgResolved) resolve();
     });
+}
+
+// 后台补充加载音频（更彻底地触发浏览器缓存）
+function preloadAudioOnly(idx) {
+    var a = animals[displayOrder[idx]];
+    var srcs = [];
+    if (a.speech_zh) srcs.push(a.speech_zh);
+    if (a.speech_en) srcs.push(a.speech_en);
+    if (a.speech_fact) srcs.push(a.speech_fact);
+    for (var i = 0; i < srcs.length; i++) {
+        if (!preloaded[srcs[i]]) {
+            preloaded[srcs[i]] = true;
+            var audio = new Audio();
+            audio.preload = 'auto';
+            audio.src = srcs[i];
+        }
+    }
 }
 
 // 预加载窗口：后方3个（即将看到的）+ 前方1个（回退用的）
@@ -396,23 +397,30 @@ function getPreloadTargets() {
     return targets;
 }
 
-// 预加载指定索引列表，返回 Promise（所有完成后 resolve）
+// 串行预加载指定索引列表，返回 Promise（全部图片完成后 resolve）
 function preloadBatch(indices) {
-    var promises = [];
-    for (var i = 0; i < indices.length; i++) {
-        var idx = indices[i];
-        if (preloadingSet[idx]) continue;
+    var i = 0;
+    function next() {
+        if (i >= indices.length) return Promise.resolve();
+        var idx = indices[i++];
+        if (preloadingSet[idx]) return next();
         preloadingSet[idx] = true;
-        promises.push(preloadOne(idx).then(function() {
+        return preloadOne(idx).then(function() {
             preloadingSet[idx] = false;
-        }));
+            return next();
+        });
     }
-    return Promise.all(promises);
+    return next();
 }
 
-// 维护预加载窗口（后台静默）
+// 维护预加载窗口（后台静默，串行加载）
 function maintainPreload() {
-    preloadBatch(getPreloadTargets());
+    var targets = getPreloadTargets();
+    var toLoad = [];
+    for (var i = 0; i < targets.length; i++) {
+        if (!preloadingSet[targets[i]]) toLoad.push(targets[i]);
+    }
+    if (toLoad.length > 0) preloadBatch(toLoad);
 }
 
 // 显示加载动画
