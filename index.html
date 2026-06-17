@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4a7c59">
+    <title>Word Cards — 儿童双语学习卡片</title>
+    <style>
+        :root {
+            --bg: #f5f0e8;
+            --card-bg: #ffffff;
+            --primary: #4a7c59;
+            --accent: #e8a87c;
+            --text: #3c3c3c;
+            --radius: 24px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(74,124,89,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(232,168,124,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(74,124,89,0.04) 0%, transparent 50%);
+            min-height: 100dvh;
+            padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)) 16px;
+            display: flex; flex-direction: column; align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .page {
+            width: 100%; max-width: 600px;
+        }
+
+        .hero {
+            text-align: center; padding: 24px 0 12px;
+        }
+        .hero .logo {
+            font-size: 56px; line-height: 1; margin-bottom: 8px;
+        }
+        .hero h1 {
+            font-size: clamp(24px, 5vw, 32px); font-weight: 700; color: var(--text);
+            letter-spacing: 1px;
+        }
+        .hero .subtitle {
+            font-size: 14px; color: #999; margin-top: 6px; letter-spacing: 0.5px;
+        }
+
+        .section-title {
+            font-size: 14px; font-weight: 600; color: #aaa;
+            text-transform: uppercase; letter-spacing: 2px;
+            padding: 20px 8px 10px;
+        }
+
+        .grid {
+            display: grid; gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+        }
+        @media (min-width: 500px) {
+            .grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .category-card {
+            aspect-ratio: 1;
+            background: var(--card-bg);
+            border-radius: 20px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer; text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            position: relative; overflow: hidden;
+        }
+        .category-card:active { transform: scale(0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .category-card .cat-emoji {
+            font-size: clamp(40px, 10vw, 56px); line-height: 1; margin-bottom: 6px;
+        }
+        .category-card .cat-name {
+            font-size: clamp(14px, 3vw, 17px); font-weight: 700; color: var(--text);
+            letter-spacing: 1px;
+        }
+        .category-card .cat-count {
+            font-size: 11px; color: #bbb; margin-top: 2px;
+        }
+        .category-card .badge-new {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--accent); color: #fff;
+            font-size: 10px; padding: 2px 8px; border-radius: 10px;
+            font-weight: 600; letter-spacing: 0.5px;
+        }
+        .category-card.coming-soon {
+            opacity: 0.5; cursor: default;
+        }
+        .category-card.coming-soon .coming-label {
+            position: absolute; bottom: 14px;
+            font-size: 11px; color: #bbb; letter-spacing: 1px;
+        }
+
+        .footer {
+            text-align: center; padding: 24px 0 12px;
+            font-size: 12px; color: #ccc; letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <div class="hero">
+        <div class="logo">📚</div>
+        <h1>儿童双语学习卡片</h1>
+        <div class="subtitle">Word Cards · 边玩边学</div>
+    </div>
+
+    <div class="section-title">学习类别</div>
+    <div class="grid">
+        <!-- 动物 — 已完成 -->
+        <a class="category-card" href="animal-cards.html">
+            <div class="badge-new">NEW</div>
+            <div class="cat-emoji">🦁</div>
+            <div class="cat-name">动物</div>
+            <div class="cat-count">21 种</div>
+        </a>
+
+        <!-- 水果 — 即将推出 -->
+        <div class="category-card coming-soon">
+            <div class="cat-emoji">🍎</div>
+            <div class="cat-name">水果</div>
+            <div class="coming-label">即将推出</div>
+        </div>
+
+        <!-- 交通工具 — 即将推出 -->
+        <div class="category-card coming-soon">
+            <div class="cat-emoji">🚗</div>
+            <div class="cat-name">交通工具</div>
+            <div class="coming-label">即将推出</div>
+        </div>
+
+        <!-- 颜色形状 — 即将推出 -->
+        <div class="category-card coming-soon">
+            <div class="cat-emoji">🌈</div>
+            <div class="cat-name">颜色形状</div>
+            <div class="coming-label">即将推出</div>
+        </div>
+
+        <!-- 数字 — 即将推出 -->
+        <div class="category-card coming-soon">
+            <div class="cat-emoji">🔢</div>
+            <div class="cat-name">数字</div>
+            <div class="coming-label">即将推出</div>
+        </div>
+
+        <!-- 身体部位 — 即将推出 -->
+        <div class="category-card coming-soon">
+            <div class="cat-emoji">👋</div>
+            <div class="cat-name">身体部位</div>
+            <div class="coming-label">即将推出</div>
+        </div>
+    </div>
+
+    <div class="footer">Made with ❤️ for kids</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "Word Cards — 儿童双语学习卡片",
+  "short_name": "Word Cards",
+  "description": "面向学龄前及小学低年级儿童的交互式双语学习卡片",
+  "start_url": "/word-cards/",
+  "scope": "/word-cards/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f0e8",
+  "theme_color": "#4a7c59",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
