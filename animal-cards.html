@@ -319,7 +319,7 @@ function speakAndCopy(lang) {
 
 // ========== 图片渲染 + 拖拽 + 双指缩放 + 缩放切换 ==========
 let zoomEnabled = false;
-let dragAxis = null, offsetX = 0, offsetY = 0;
+let offsetX = 0, offsetY = 0;
 let zoomScale = 1;      // 当前缩放倍率（相对于 cover 状态的基准）
 let baseScale = 1;      // cover 状态下的基准缩放比例
 let cardImg = null;
@@ -381,7 +381,6 @@ function setZoomMode(on) {
             cardImg.style.left = '0';
             cardImg.style.top = '0';
         }
-        dragAxis = null;
         updateZoomIcon();
     }
 }
@@ -403,23 +402,8 @@ function applyOffset() {
     cardImg.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 }
 
-function getOverflowAxis() {
-    if (!cardImg) return 'none';
-    const cw = cardImage.clientWidth;
-    const ch = cardImage.clientHeight;
-    const imgW = parseFloat(cardImg.style.width) || cw;
-    const imgH = parseFloat(cardImg.style.height) || ch;
-    const overflowX = imgW > cw + 2;
-    const overflowY = imgH > ch + 2;
-    if (overflowX && overflowY) return 'both';
-    if (overflowX) return 'x';
-    if (overflowY) return 'y';
-    return 'none';
-}
-
 function onDragStart() {
     if (!zoomEnabled) return;
-    dragAxis = null;
     if (cardImg) cardImg.style.transition = 'none';
 }
 
@@ -428,17 +412,8 @@ function onDragMove(ex, ey, prevX, prevY) {
     const dx = ex - prevX;
     const dy = ey - prevY;
 
-    if (dragAxis === null && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-        const axis = getOverflowAxis();
-        if (axis === 'both') dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        else if (axis === 'x') dragAxis = 'x';
-        else if (axis === 'y') dragAxis = 'y';
-        else dragAxis = 'none';
-    }
-
-    if (dragAxis === 'x') offsetX += dx;
-    else if (dragAxis === 'y') offsetY += dy;
-    else return;
+    offsetX += dx;
+    offsetY += dy;
 
     clampAllOffsets();
     return { x: ex, y: ey };
@@ -447,7 +422,6 @@ function onDragMove(ex, ey, prevX, prevY) {
 function onDragEnd() {
     if (!zoomEnabled) return;
     if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
-    dragAxis = null;
 }
 
 // ========== 双指缩放 ==========
@@ -518,7 +492,6 @@ function renderImage() {
     const hasImage = animal.image && animal.image.length > 0;
     zoomEnabled = false;
     zoomScale = 1;
-    dragAxis = null;
     offsetX = 0; offsetY = 0;
 
     if (!hasImage) {
@@ -673,8 +646,7 @@ function renderImage() {
         const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
         if (!t) return;
         const result = onDragMove(t.clientX, t.clientY, lastTX, lastTY);
-        if (result) { lastTX = result.x; lastTY = result.y; }
-        if (dragAxis && dragAxis !== 'none') e.preventDefault();
+        if (result) { lastTX = result.x; lastTY = result.y; e.preventDefault(); }
     };
     cardImage.ontouchend = function(e) {
         if (pinchActive && e.touches.length < 2) {
@@ -713,12 +685,14 @@ function renderImage() {
 
     // 点击：没拖动时播放叫声
     let didDrag = false;
+    let dragStartOX = 0, dragStartOY = 0;
     cardImage.addEventListener('pointerdown', function(e) {
         if (e.target === zoomBtn) return;
         didDrag = false;
+        dragStartOX = offsetX; dragStartOY = offsetY;
     });
     cardImage.addEventListener('pointermove', function() {
-        if (dragAxis && dragAxis !== 'none') didDrag = true;
+        if (offsetX !== dragStartOX || offsetY !== dragStartOY) didDrag = true;
     });
     cardImage.addEventListener('pointerup', function(e) {
         if (e.target === zoomBtn) return;
