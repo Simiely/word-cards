@@ -673,6 +673,9 @@ function onPinchEnd() {
 }
 
 function renderImage() {
+    // 清理上一次渲染的全局事件监听
+    if (cardImage._cleanup) { cardImage._cleanup(); cardImage._cleanup = null; }
+
     const animal = currentAnimal();
     const hasImage = animal.image && animal.image.length > 0;
     zoomEnabled = false;
