@@ -187,9 +187,9 @@
         <div class="card-image" id="cardImage"></div>
         <div class="card-body">
             <div class="animal-emoji" id="animalEmoji"></div>
-            <div class="zh-name" id="zhName" ontouchend="(function(){alert('zh touched');speakAndCopy('zh');})();return false;" onclick="speakAndCopy('zh')"></div>
-            <div class="en-name" id="enName" ontouchend="(function(){alert('en touched');speakAndCopy('en');})();return false;" onclick="speakAndCopy('en')"></div>
-            <div class="fact" id="fact" ontouchend="(function(){alert('fact touched');speak('fact');})();return false;" onclick="speak('fact')"></div>
+            <div class="zh-name" id="zhName" ontouchend="speakAndCopy('zh');return false;" onclick="speakAndCopy('zh')"></div>
+            <div class="en-name" id="enName" ontouchend="speakAndCopy('en');return false;" onclick="speakAndCopy('en')"></div>
+            <div class="fact" id="fact" ontouchend="speak('fact');return false;" onclick="speak('fact')"></div>
         </div>
     </div>
     <div class="nav">
@@ -284,55 +284,63 @@ function warmUpSpeech() {
 }
 
 function speak(lang) {
-    warmUpSpeech();
-    const animal = animals[currentIndex];
-    let text;
-    if (lang === 'zh') text = animal.zh;
-    else if (lang === 'en') text = animal.en;
-    else if (lang === 'fact') text = animal.fact;
+    try {
+        warmUpSpeech();
+        const animal = animals[currentIndex];
+        var text;
+        if (lang === 'zh') text = animal.zh;
+        else if (lang === 'en') text = animal.en;
+        else if (lang === 'fact') text = animal.fact;
 
-    // iOS 上 speechSynthesis 有时会暂停，需要 resume
-    if (speechSynthesis.paused) speechSynthesis.resume();
-    speechSynthesis.cancel();
+        if (speechSynthesis.paused) speechSynthesis.resume();
+        speechSynthesis.cancel();
 
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
-    u.rate = 0.85;
-    u.volume = 1;
+        var u = new SpeechSynthesisUtterance(text);
+        u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
+        u.rate = 0.85;
+        u.volume = 1;
+        speechSynthesis.speak(u);
 
-    // iOS 上可能因 cancel 导致 speak 被忽略，加延迟重试
-    speechSynthesis.speak(u);
-    // 保险：如果 100ms 后还没开始播放，重新 speak
-    setTimeout(() => {
-        if (!speechSynthesis.speaking) {
-            speechSynthesis.cancel();
-            const u2 = new SpeechSynthesisUtterance(text);
-            u2.lang = lang === 'en' ? 'en-US' : 'zh-CN';
-            u2.rate = 0.85;
-            u2.volume = 1;
-            speechSynthesis.speak(u2);
-        }
-    }, 100);
+        setTimeout(function() {
+            if (!speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+                var u2 = new SpeechSynthesisUtterance(text);
+                u2.lang = lang === 'en' ? 'en-US' : 'zh-CN';
+                u2.rate = 0.85;
+                u2.volume = 1;
+                speechSynthesis.speak(u2);
+            }
+        }, 100);
+    } catch(e) {}
 }
 
 // ========== 朗读+复制 ==========
 function speakAndCopy(lang) {
-    speak(lang);
-    const animal = animals[currentIndex];
-    const text = lang === 'zh' ? animal.zh : animal.en;
-    const el = lang === 'zh' ? zhNameEl : enNameEl;
-    navigator.clipboard.writeText(text).catch(() => {});
-    // 显示复制提示气泡
-    let tip = el.querySelector('.copy-tip');
-    if (!tip) {
-        tip = document.createElement('span');
-        tip.className = 'copy-tip';
-        tip.textContent = '已复制';
-        el.appendChild(tip);
-    }
-    tip.classList.add('show');
-    clearTimeout(el._copyTimer);
-    el._copyTimer = setTimeout(() => tip.classList.remove('show'), 1000);
+    try { speak(lang); } catch(e) {}
+    try {
+        const animal = animals[currentIndex];
+        const text = lang === 'zh' ? animal.zh : animal.en;
+        const el = lang === 'zh' ? zhNameEl : enNameEl;
+
+        // clipboard 可能不可用，不影响朗读
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(function(){});
+            }
+        } catch(e) {}
+
+        // 显示复制提示气泡
+        let tip = el.querySelector('.copy-tip');
+        if (!tip) {
+            tip = document.createElement('span');
+            tip.className = 'copy-tip';
+            tip.textContent = '已复制';
+            el.appendChild(tip);
+        }
+        tip.classList.add('show');
+        clearTimeout(el._copyTimer);
+        el._copyTimer = setTimeout(function(){ tip.classList.remove('show'); }, 1000);
+    } catch(e) {}
 }
 
 // ========== 图片渲染 + 拖拽 + 双指缩放 + 缩放切换 ==========
