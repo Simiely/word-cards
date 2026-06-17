@@ -562,11 +562,10 @@ function goTo(idx) {
 }
 
 function goRandom() {
-    let ni;
-    const total = displayOrder.length;
-    do { ni = Math.floor(Math.random() * total); }
-    while (ni === currentIndex && total > 1);
-    goTo(ni);
+    // 重新洗牌所有动物，跳转到第一个
+    buildGroups();
+    groupIndex = -1;
+    goTo(0);
 }
 
 document.addEventListener('keydown', function(e) {

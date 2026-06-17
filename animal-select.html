@@ -339,20 +339,34 @@ function getEmojiAvgColor(emoji, callback) {
     callback(color);
 }
 
+// ========== 拼音排序 ==========
+// 按中文名第一个字的拼音排序
+var sortedOrder = [];
+(function() {
+    var indexed = animals.map(function(a, i) { return { idx: i, zh: a.zh }; });
+    indexed.sort(function(a, b) {
+        return a.zh.localeCompare(b.zh, 'zh-CN');
+    });
+    for (var i = 0; i < indexed.length; i++) {
+        sortedOrder.push(indexed[i].idx);
+    }
+})();
+
 // ========== 构建网格 ==========
 function buildGrid(container, onClickHandler) {
     container.innerHTML = '';
-    for (var i = 0; i < animals.length; i++) {
-        (function(idx) {
-            var a = animals[idx];
+    for (var i = 0; i < sortedOrder.length; i++) {
+        (function(displayIdx) {
+            var realIdx = sortedOrder[displayIdx];
+            var a = animals[realIdx];
             var item = document.createElement('div');
             item.className = 'grid-item';
-            item.setAttribute('data-index', idx);
+            item.setAttribute('data-index', realIdx);
             getEmojiAvgColor(a.emoji, function(color) {
                 item.style.backgroundColor = color;
             });
             item.innerHTML = '<div class="item-emoji">' + a.emoji + '</div><div class="item-name">' + a.zh + '</div>';
-            item.addEventListener('click', function() { onClickHandler(idx); });
+            item.addEventListener('click', function() { onClickHandler(realIdx); });
             container.appendChild(item);
         })(i);
     }
