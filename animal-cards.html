@@ -897,8 +897,9 @@ function goTo(idx) {
             currentIndex = idx;
             renderCard();
             setTimeout(function() { speak('zh'); }, 300);
-            // 后台预加载下一组
+            // 后台预加载后续两组
             preloadGroupSilent(newGroup + 1);
+            preloadGroupSilent(newGroup + 2);
         } else {
             // 还没加载好，显示动画等待
             var group = groups[newGroup];
@@ -909,8 +910,9 @@ function goTo(idx) {
                 renderCard();
                 hideLoading();
                 setTimeout(function() { speak('zh'); }, 400);
-                // 后台预加载下一组
+                // 后台预加载后续两组
                 preloadGroupSilent(newGroup + 1);
+                preloadGroupSilent(newGroup + 2);
             });
         }
     } else {
@@ -949,10 +951,13 @@ groupIndex = 0;
 var firstGroup = groups[0];
 showLoading(animals[firstGroup[0]].emoji || '📷');
 
-// 首屏：预加载第0组（必须）+ 第1组（后台）
+// 首屏：预加载组0（等待）+ 组1组2（后台），防止快速翻页卡顿
 var promises = [preloadGroup(0)];
 if (groups.length > 1) {
     preloadGroupSilent(1);
+    if (groups.length > 2) {
+        preloadGroupSilent(2);
+    }
 }
 
 // 第0组加载完就显示（不等待第1组）
