@@ -426,9 +426,10 @@ function speak(lang, animal) {
 }
 
 function playAnimalSoundPop(animal) {
-    if (!animal.sound) return;
-    var audio = new Audio(animal.sound);
-    audio.volume = 0.8;
+    var src = animal.sound || animal.speech_zh;
+    if (!src) return;
+    var audio = new Audio(src);
+    audio.volume = animal.sound ? 0.8 : 1;
     audio.play().catch(function(){});
 }
 

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4a7c59">
     <title>卡片模式 - Animal Flashcards</title>
     <style>
         :root {
@@ -411,9 +413,11 @@ function preloadGroupSilent(groupIdx) {
 // ========== 音效 ==========
 function playAnimalSound() {
     const animal = currentAnimal();
-    if (!animal.sound) return;
-    const audio = new Audio(animal.sound);
-    audio.volume = 0.8;
+    // 优先使用叫声，fallback 到中文语音
+    var src = animal.sound || animal.speech_zh;
+    if (!src) return;
+    const audio = new Audio(src);
+    audio.volume = animal.sound ? 0.8 : 1;
     audio.play().catch(function() {});
 }
 
