@@ -406,12 +406,9 @@ function showLoading(emoji) {
     loadingOverlay.classList.remove('hidden', 'fade-out');
 }
 
-// 隐藏加载动画（带过渡）
+// 隐藏加载动画（直接隐藏）
 function hideLoading() {
-    loadingOverlay.classList.add('fade-out');
-    setTimeout(function() {
-        loadingOverlay.classList.add('hidden');
-    }, 500);
+    loadingOverlay.classList.add('hidden');
 }
 
 // ========== 音效 ==========
@@ -559,18 +556,22 @@ initialTargets.unshift(0);                 // 加上当前卡片 → 0,1,2,3
 // 显示加载动画
 showLoading(animals[displayOrder[0]].emoji || '📷');
 
-// 总超时兜底：8秒后无论如何显示卡片
+// 总超时兜底：6秒后无论如何显示卡片
 var bootTimeout = setTimeout(function() {
-    renderCard();
-    hideLoading();
-}, 8000);
+    if (bootTimeout) {
+        bootTimeout = null;
+        renderCard();
+        hideLoading();
+    }
+}, 6000);
 
 preloadBatch(initialTargets).then(function() {
+    if (!bootTimeout) return; // 已被超时兜底处理
     clearTimeout(bootTimeout);
+    bootTimeout = null;
     renderCard();
     hideLoading();
     setTimeout(function() { speak('zh'); }, 400);
-    // 后台维护预加载窗口
     maintainPreload();
 });
 </script>
