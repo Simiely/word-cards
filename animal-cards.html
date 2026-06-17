@@ -157,7 +157,6 @@
             pointer-events: none; opacity: 0; transition: opacity 0.3s;
         }
         .copy-tip.show { opacity: 1; }
-        .copy-tip.show { opacity: 1; }
         .card-body .en-name {
             font-size: clamp(17px, 3.5vw, 20px); font-weight: 400; color: #888;
             cursor: pointer; margin-top: 8px; line-height: 1.4; min-height: 1.4em;
@@ -282,9 +281,6 @@ const totalCountEl = document.getElementById('totalCount');
 const animalEmojiEl = document.getElementById('animalEmoji');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadingEmoji = document.getElementById('loadingEmoji');
-
-// ========== 启动时隐藏加载动画 ==========
-loadingOverlay.classList.add('hidden');
 
 // ========== 展示顺序 ==========
 let displayOrder = [];     // 展示顺序（全局索引数组，已随机打乱）
