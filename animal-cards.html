@@ -520,7 +520,15 @@ function renderCard() {
 }
 
 // ========== 导航 ==========
+var navLock = null;  // 导航锁：防止快速翻页时 loading 冲突
+
 function goTo(idx) {
+    // 如果正在加载中，取消上一次的等待
+    if (navLock) {
+        clearTimeout(navLock.timeout);
+        navLock = null;
+    }
+
     const total = displayOrder.length;
     if (idx < 0) idx = total - 1;
     if (idx >= total) idx = 0;
@@ -537,13 +545,20 @@ function goTo(idx) {
     } else {
         // 图片未缓存，显示加载动画等待
         showLoading(a.emoji || '📷');
-        var navTimeout = setTimeout(function() {
+        var lock = { timeout: null };
+        navLock = lock;
+        lock.timeout = setTimeout(function() {
+            if (navLock !== lock) return;
+            navLock = null;
             currentIndex = idx;
             renderCard();
             hideLoading();
+            maintainPreload();
         }, 5000);
         preloadOne(idx).then(function() {
-            clearTimeout(navTimeout);
+            if (navLock !== lock) return;
+            clearTimeout(lock.timeout);
+            navLock = null;
             currentIndex = idx;
             renderCard();
             hideLoading();
