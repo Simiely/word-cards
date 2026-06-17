@@ -67,8 +67,8 @@
             -webkit-user-drag: none;
         }
         .card-image.zoom-mode img {
-            width: 100%; height: 100%;
-            object-fit: cover;
+            width: auto; height: auto;
+            object-fit: unset;
         }
         .card-image img.switching { opacity: 0; }
 
@@ -313,14 +313,34 @@ function setZoomMode(on) {
     zoomEnabled = on;
     if (on) {
         cardImage.classList.add('zoom-mode');
-        // 重置偏移
+        // 等比放大图片至短边填满容器
+        if (cardImg && cardImg.naturalWidth) {
+            const cw = cardImage.clientWidth;
+            const ch = cardImage.clientHeight;
+            const iw = cardImg.naturalWidth;
+            const ih = cardImg.naturalHeight;
+            // 短边填满：取 min scale（让短边刚好贴合，长边溢出）
+            const scale = Math.max(cw / iw, ch / ih);
+            cardImg.style.width = (iw * scale) + 'px';
+            cardImg.style.height = (ih * scale) + 'px';
+            // 居中
+            cardImg.style.left = ((cw - iw * scale) / 2) + 'px';
+            cardImg.style.top = ((ch - ih * scale) / 2) + 'px';
+        }
         offsetX = 0; offsetY = 0;
         if (cardImg) { cardImg.style.transition = 'transform 0.3s ease'; cardImg.style.transform = ''; }
         updateZoomIcon();
     } else {
         cardImage.classList.remove('zoom-mode', 'dragging');
         offsetX = 0; offsetY = 0;
-        if (cardImg) { cardImg.style.transition = 'transform 0.3s ease'; cardImg.style.transform = ''; }
+        if (cardImg) {
+            cardImg.style.transition = 'transform 0.3s ease';
+            cardImg.style.transform = '';
+            cardImg.style.width = '100%';
+            cardImg.style.height = '100%';
+            cardImg.style.left = '0';
+            cardImg.style.top = '0';
+        }
         dragAxis = null;
         updateZoomIcon();
     }
@@ -349,7 +369,7 @@ function clampOffset() {
     const ch = cardImage.clientHeight;
     const iw = cardImg.naturalWidth || cw;
     const ih = cardImg.naturalHeight || ch;
-    // object-fit: cover 等比缩放
+    // 图片等比放大至短边填满，计算溢出量
     const scale = Math.max(cw / iw, ch / ih);
     const displayW = iw * scale;
     const displayH = ih * scale;
@@ -376,11 +396,11 @@ function onDragMove(ex, ey, prevX, prevY) {
         const ch = cardImage.clientHeight;
         const iw = cardImg.naturalWidth || cw;
         const ih = cardImg.naturalHeight || ch;
-        // object-fit: cover 的缩放比：取 max，只有一个方向溢出
+        // 图片等比放大至短边填满，判断溢出方向
         const scale = Math.max(cw / iw, ch / ih);
         const overflowX = (iw * scale) > cw + 2;
         const overflowY = (ih * scale) > ch + 2;
-        // cover 模式下理论上不会同时溢出，但保留判断
+        // 等比放大模式下，只有一个方向溢出
         if (overflowX && overflowY) dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         else if (overflowX) dragAxis = 'x';
         else if (overflowY) dragAxis = 'y';
