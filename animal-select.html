@@ -30,9 +30,21 @@
         /* 顶部栏 */
         .top-bar {
             display: flex; align-items: center; justify-content: space-between;
-            max-width: 800px; margin: 0 auto 12px; padding: 0 4px;
+            max-width: 800px; margin: 0 auto 12px; padding: 4px 4px 0; position: relative;
         }
-        .top-bar .title { font-size: 18px; font-weight: 700; color: var(--text); }
+        .top-bar .badge {
+            display: inline-block; background: var(--primary); color: #fff;
+            font-size: 14px; padding: 8px 18px; border-radius: 20px; letter-spacing: 0.5px;
+            font-weight: 600; flex-shrink: 0;
+        }
+        .top-bar .category-title {
+            font-size: clamp(20px, 4.5vw, 26px); font-weight: 700; color: var(--text);
+            letter-spacing: 1px; position: absolute; left: 50%; transform: translateX(-50%);
+            pointer-events: none;
+        }
+        .top-bar .btn-group {
+            display: flex; gap: 8px; flex-shrink: 0;
+        }
         .top-bar .btn-back {
             display: inline-block; background: var(--card-bg); color: var(--text);
             font-size: 14px; padding: 8px 18px; border-radius: 20px;
@@ -40,6 +52,14 @@
             font-weight: 600; transition: all 0.2s;
         }
         .top-bar .btn-back:active { border-color: var(--primary); color: var(--primary); }
+        .top-bar .btn-refresh {
+            display: inline-block; background: var(--card-bg); color: var(--text);
+            font-size: 14px; padding: 8px 18px; border-radius: 20px;
+            border: 2px solid #e0dcd4; cursor: pointer;
+            font-weight: 600; transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .top-bar .btn-refresh:active { border-color: var(--accent); color: var(--accent); }
 
         /* 瀑布流网格 */
         .grid {
@@ -169,8 +189,12 @@
 <body>
 
 <div class="top-bar">
-    <div class="title">浏览模式</div>
-    <a class="btn-back" href="animal-cards.html">卡片模式</a>
+    <div class="badge">浏览模式</div>
+    <div class="category-title">动物</div>
+    <div class="btn-group">
+        <button class="btn-refresh" id="btnRefresh" title="清除浏览记录">再来一次</button>
+        <a class="btn-back" href="animal-cards.html">卡片模式</a>
+    </div>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -483,6 +507,15 @@ document.getElementById('popCard').addEventListener('click', function(e) {
     if (target === popZhName) { speak('zh', a); }
     else if (target === popEnName) { speak('en', a); }
     else if (target === popFact) { speak('fact', a); }
+});
+
+// ========== 再来一次 ==========
+document.getElementById('btnRefresh').addEventListener('click', function() {
+    localStorage.removeItem('animal_select_visited');
+    var items = document.querySelectorAll('.grid-item');
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.remove('visited');
+    }
 });
 
 // ========== 启动 ==========
