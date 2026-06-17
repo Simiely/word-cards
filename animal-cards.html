@@ -393,6 +393,20 @@ function maintainPreload() {
     preloadBatch(getPreloadTargets());
 }
 
+// 显示加载动画
+function showLoading(emoji) {
+    loadingEmoji.textContent = emoji || '📷';
+    loadingOverlay.classList.remove('hidden', 'fade-out');
+}
+
+// 隐藏加载动画（带过渡）
+function hideLoading() {
+    loadingOverlay.classList.add('fade-out');
+    setTimeout(function() {
+        loadingOverlay.classList.add('hidden');
+    }, 500);
+}
+
 // ========== 音效 ==========
 function playAnimalSound() {
     const animal = currentAnimal();
@@ -537,12 +551,11 @@ var initialTargets = getPreloadTargets();
 var firstBatch = initialTargets.slice(0, PRELOAD_AHEAD);
 
 // 显示加载动画
-loadingOverlay.classList.remove('hidden', 'fade-out');
-loadingEmoji.textContent = animals[displayOrder[0]].emoji || '📷';
+showLoading(animals[displayOrder[0]].emoji || '📷');
 
 preloadBatch(firstBatch).then(function() {
     renderCard();
-    loadingOverlay.classList.add('hidden');
+    hideLoading();
     setTimeout(function() { speak('zh'); }, 400);
     // 继续预加载剩余的（前方回退用的）
     var remaining = initialTargets.slice(PRELOAD_AHEAD);
