@@ -148,8 +148,10 @@
         .card-overlay .card-body .animal-emoji {
             position: absolute; top: 14px; right: 24px;
             font-size: clamp(36px, 7vw, 48px); line-height: 1;
-            pointer-events: none; opacity: 0.85;
+            opacity: 0.85; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
+        .card-overlay .card-body .animal-emoji:active { transform: scale(1.2); }
         .card-overlay .card-body .zh-name {
             font-size: clamp(28px, 5vw, 36px); font-weight: 700; color: var(--text);
             cursor: pointer; line-height: 1.3; padding-right: 60px;
@@ -437,6 +439,13 @@ function speak(lang, animal) {
         speechAudio.volume = 1;
         speechAudio.play().catch(function(){});
     } catch(e) {}
+}
+
+function playAnimalSoundPop(animal) {
+    if (!animal.sound) return;
+    var audio = new Audio(animal.sound);
+    audio.volume = 0.8;
+    audio.play().catch(function(){});
 }
 
 // ========== 卡片弹出 ==========
@@ -798,7 +807,7 @@ btnClose.addEventListener('click', function(e) {
     closeCard();
 });
 
-// 点击卡片文字发音
+// 点击卡片文字/emoji发音
 document.getElementById('popCard').addEventListener('click', function(e) {
     var target = e.target;
     if (currentPopIndex < 0) return;
@@ -806,6 +815,7 @@ document.getElementById('popCard').addEventListener('click', function(e) {
     if (target === popZhName) { speak('zh', a); }
     else if (target === popEnName) { speak('en', a); }
     else if (target === popFact) { speak('fact', a); }
+    else if (target === popEmoji) { playAnimalSoundPop(a); }
 });
 
 // ========== 再来一次 ==========
