@@ -420,11 +420,10 @@ function preloadGroupSilent(groupIdx) {
 // ========== 音效 ==========
 function playAnimalSound() {
     const animal = currentAnimal();
-    // 优先使用叫声，fallback 到中文语音
-    var src = animal.sound || animal.speech_zh;
+    var src = animal.sound;
     if (!src) return;
     const audio = new Audio(src);
-    audio.volume = animal.sound ? 0.8 : 1;
+    audio.volume = 0.8;
     audio.play().catch(function() {});
 }
 

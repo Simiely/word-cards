@@ -424,10 +424,10 @@ function speak(lang, animal) {
 }
 
 function playAnimalSoundPop(animal) {
-    var src = animal.sound || animal.speech_zh;
+    var src = animal.sound;
     if (!src) return;
     var audio = new Audio(src);
-    audio.volume = animal.sound ? 0.8 : 1;
+    audio.volume = 0.8;
     audio.play().catch(function(){});
 }
 
