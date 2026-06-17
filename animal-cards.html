@@ -587,6 +587,50 @@ function renderImage() {
         e.stopPropagation();
     });
 
+    // === 鼠标滚轮缩放（模拟双指缩放） ===
+    cardImage.addEventListener('wheel', function(e) {
+        if (!cardImg) return;
+        e.preventDefault();
+
+        // 非zoom模式下滚轮缩放，自动进入zoom模式
+        if (!zoomEnabled) {
+            setZoomMode(true);
+        }
+
+        const rect = cardImage.getBoundingClientRect();
+        const anchorX = e.clientX - rect.left;
+        const anchorY = e.clientY - rect.top;
+
+        // 保存缩放前的状态
+        const prevScale = zoomScale;
+        const imgRect = cardImg.getBoundingClientRect();
+        const imgCX = imgRect.left + imgRect.width / 2;
+        const imgCY = imgRect.top + imgRect.height / 2;
+        const relX = anchorX - imgCX;
+        const relY = anchorY - imgCY;
+
+        // 根据滚轮方向调整缩放
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const newScale = Math.max(0.5, Math.min(4, zoomScale + delta));
+
+        if (newScale === zoomScale) return;
+
+        const scaleChange = newScale / zoomScale;
+        zoomScale = newScale;
+        applyImgSize();
+
+        // 以鼠标位置为锚点调整偏移
+        offsetX = offsetX - relX * (scaleChange - 1);
+        offsetY = offsetY - relY * (scaleChange - 1);
+        clampAllOffsets();
+
+        if (cardImg) cardImg.style.transition = 'none';
+        clearTimeout(cardImage._wheelTimer);
+        cardImage._wheelTimer = setTimeout(function() {
+            if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
+        }, 150);
+    }, { passive: false });
+
     // === 鼠标拖拽 ===
     let mouseDown = false, lastMX = 0, lastMY = 0;
     cardImage.onmousedown = function(e) {
