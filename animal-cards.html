@@ -256,6 +256,7 @@
 </div>
 
 <script src="animal-data.js"></script>
+<script src="image-interaction.js"></script>
 <script>
 // ============================================================
 // 图片和声音文件路径说明：见 animal-data.js
@@ -463,372 +464,35 @@ function speakAndCopy(lang) {
     } catch(e) {}
 }
 
-// ========== 图片渲染 + 拖拽 + 双指缩放 + 缩放切换 ==========
-let zoomEnabled = false;
-let offsetX = 0, offsetY = 0;
-let zoomScale = 1;      // 当前缩放倍率（相对于 cover 状态的基准）
-let baseScale = 1;      // cover 状态下的基准缩放比例
-let cardImg = null;
-
-function getImgBaseSize() {
-    if (!cardImg || !cardImg.naturalWidth) return { w: 0, h: 0 };
-    const cw = cardImage.clientWidth;
-    const ch = cardImage.clientHeight;
-    const iw = cardImg.naturalWidth;
-    const ih = cardImg.naturalHeight;
-    baseScale = Math.max(cw / iw, ch / ih);
-    return { w: iw * baseScale, h: ih * baseScale };
-}
-
-function applyImgSize() {
-    if (!cardImg) return;
-    const { w, h } = getImgBaseSize();
-    const sw = w * zoomScale;
-    const sh = h * zoomScale;
-    const cw = cardImage.clientWidth;
-    const ch = cardImage.clientHeight;
-    cardImg.style.width = sw + 'px';
-    cardImg.style.height = sh + 'px';
-    cardImg.style.left = ((cw - sw) / 2) + 'px';
-    cardImg.style.top = ((ch - sh) / 2) + 'px';
-}
-
-function clampAllOffsets() {
-    if (!cardImg) return;
-    const cw = cardImage.clientWidth;
-    const ch = cardImage.clientHeight;
-    const imgW = parseFloat(cardImg.style.width) || cw;
-    const imgH = parseFloat(cardImg.style.height) || ch;
-    const maxDX = Math.max(0, (imgW - cw) / 2);
-    const maxDY = Math.max(0, (imgH - ch) / 2);
-    offsetX = Math.max(-maxDX, Math.min(maxDX, offsetX));
-    offsetY = Math.max(-maxDY, Math.min(maxDY, offsetY));
-    applyOffset();
-}
-
-function setZoomMode(on) {
-    zoomEnabled = on;
-    if (on) {
-        cardImage.classList.add('zoom-mode');
-        zoomScale = 1;
-        offsetX = 0; offsetY = 0;
-        applyImgSize();
-        if (cardImg) { cardImg.style.transition = 'transform 0.3s ease'; cardImg.style.transform = ''; }
-        updateZoomIcon();
-    } else {
-        cardImage.classList.remove('zoom-mode', 'dragging');
-        zoomScale = 1;
-        offsetX = 0; offsetY = 0;
-        if (cardImg) {
-            cardImg.style.transition = 'transform 0.3s ease';
-            cardImg.style.transform = '';
-            cardImg.style.width = '100%';
-            cardImg.style.height = '100%';
-            cardImg.style.left = '0';
-            cardImg.style.top = '0';
-        }
-        updateZoomIcon();
-    }
-}
-
-function updateZoomIcon() {
-    const btn = cardImage.querySelector('.zoom-toggle');
-    if (!btn) return;
-    if (zoomEnabled) {
-        btn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>`;
-        btn.title = '缩小查看完整图片';
-    } else {
-        btn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg>`;
-        btn.title = '放大填充';
-    }
-}
-
-function applyOffset() {
-    if (!cardImg) return;
-    cardImg.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-}
-
-function onDragStart() {
-    if (!zoomEnabled) return;
-    if (cardImg) cardImg.style.transition = 'none';
-}
-
-function onDragMove(ex, ey, prevX, prevY) {
-    if (!zoomEnabled) return;
-    const dx = ex - prevX;
-    const dy = ey - prevY;
-
-    offsetX += dx;
-    offsetY += dy;
-
-    clampAllOffsets();
-    return { x: ex, y: ey };
-}
-
-function onDragEnd() {
-    if (!zoomEnabled) return;
-    if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
-}
-
-// ========== 双指缩放 ==========
-let pinchStartDist = 0;
-let pinchStartScale = 1;
-let pinchCenterX = 0, pinchCenterY = 0;
-let pinchStartOffsetX = 0, pinchStartOffsetY = 0;
-
-function getTouchDist(t1, t2) {
-    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-}
-
-function getTouchCenter(t1, t2) {
-    return {
-        x: (t1.clientX + t2.clientX) / 2,
-        y: (t1.clientY + t2.clientY) / 2
-    };
-}
-
-function onPinchStart(t1, t2) {
-    // 非zoom模式下双指缩放，自动进入zoom模式
-    if (!zoomEnabled) {
-        setZoomMode(true);
-        // setZoomMode 会重置 zoomScale，需要重新获取
-    }
-    pinchStartDist = getTouchDist(t1, t2);
-    pinchStartScale = zoomScale;
-    pinchStartOffsetX = offsetX;
-    pinchStartOffsetY = offsetY;
-    const c = getTouchCenter(t1, t2);
-    pinchCenterX = c.x; pinchCenterY = c.y;
-    if (cardImg) cardImg.style.transition = 'none';
-}
-
-function onPinchMove(t1, t2) {
-    if (pinchStartDist === 0) return;
-    const newDist = getTouchDist(t1, t2);
-    const ratio = newDist / pinchStartDist;
-    const newScale = Math.max(0.5, Math.min(4, pinchStartScale * ratio));
-
-    // 以双指中心为锚点缩放
-    const c = getTouchCenter(t1, t2);
-    const rect = cardImage.getBoundingClientRect();
-    const anchorX = c.x - rect.left;
-    const anchorY = c.y - rect.top;
-    const imgRect = cardImg.getBoundingClientRect();
-    const imgCX = imgRect.left + imgRect.width / 2;
-    const imgCY = imgRect.top + imgRect.height / 2;
-    const relX = anchorX - imgCX;
-    const relY = anchorY - imgCY;
-
-    const scaleChange = newScale / zoomScale;
-    zoomScale = newScale;
-    applyImgSize();
-
-    offsetX = pinchStartOffsetX - relX * (scaleChange - 1);
-    offsetY = pinchStartOffsetY - relY * (scaleChange - 1);
-    clampAllOffsets();
-}
-
-function onPinchEnd() {
-    pinchStartDist = 0;
-    if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
-}
+// ========== 图片渲染（使用 image-interaction.js 模块） ==========
+var imageInteractionCleanup = null;
 
 function renderImage() {
-    // 清理上一次渲染的全局事件监听
-    if (cardImage._cleanup) { cardImage._cleanup(); cardImage._cleanup = null; }
+    // 清理上一次的交互绑定
+    if (imageInteractionCleanup) { imageInteractionCleanup(); imageInteractionCleanup = null; }
 
-    const animal = currentAnimal();
-    const hasImage = animal.image && animal.image.length > 0;
-    zoomEnabled = false;
-    zoomScale = 1;
-    offsetX = 0; offsetY = 0;
+    var animal = currentAnimal();
+    var hasImage = animal.image && animal.image.length > 0;
 
     if (!hasImage) {
         cardImage.className = 'card-image no-images';
-        cardImage.innerHTML = `
-            <div class="placeholder">
-                <div class="ph-emoji">${animal.emoji || '📷'}</div>
-                <div class="ph-text">待添加图片</div>
-            </div>`;
-        cardImage.ontouchstart = null;
-        cardImage.ontouchmove = null;
-        cardImage.ontouchend = null;
-        cardImage.onmousedown = null;
-        cardImg = null;
+        cardImage.innerHTML = '<div class="placeholder"><div class="ph-emoji">' + (animal.emoji || '📷') + '</div><div class="ph-text">待添加图片</div></div>';
         return;
     }
 
     cardImage.className = 'card-image';
     cardImage.style.backgroundColor = '';
-    cardImage.innerHTML = `
-        <img src="${animal.image}" alt="${animal.zh}" id="cardImg">
-        <button class="zoom-toggle" id="zoomToggle" title="放大填充">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
-        </button>`;
+    cardImage.innerHTML = '<img src="' + animal.image + '" alt="' + animal.zh + '" id="cardImg"><button class="zoom-toggle" id="zoomToggle" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button>';
 
-    cardImg = document.getElementById('cardImg');
-    const zoomBtn = document.getElementById('zoomToggle');
+    var cardImgEl = document.getElementById('cardImg');
+    var zoomBtn = document.getElementById('zoomToggle');
 
-    // 图片加载后提取边缘平均色设为容器背景
-    cardImg.addEventListener('load', function() {
-        if (!cardImg.naturalWidth) return;
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const iw = cardImg.naturalWidth, ih = cardImg.naturalHeight;
-            canvas.width = iw; canvas.height = ih;
-            ctx.drawImage(cardImg, 0, 0, iw, ih);
-
-            // 取最外围一圈像素
-            const top = ctx.getImageData(0, 0, iw, 1).data;
-            const bottom = ctx.getImageData(0, ih-1, iw, 1).data;
-            const left = ctx.getImageData(0, 0, 1, ih).data;
-            const right = ctx.getImageData(iw-1, 0, 1, ih).data;
-
-            let r = 0, g = 0, b = 0, count = 0;
-            const add = (data) => {
-                for (let i = 0; i < data.length; i += 4) {
-                    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-                }
-            };
-            add(top); add(bottom); add(left); add(right);
-            r = Math.round(r / count);
-            g = Math.round(g / count);
-            b = Math.round(b / count);
-
-            cardImage.style.backgroundColor = `rgb(${r},${g},${b})`;
-        } catch(e) {}
+    // 初始化图片交互模块
+    imageInteractionCleanup = initImageInteraction({
+        container: cardImage,
+        img: cardImgEl,
+        zoomBtn: zoomBtn
     });
-
-    zoomBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        setZoomMode(!zoomEnabled);
-    });
-
-    zoomBtn.addEventListener('pointerdown', function(e) {
-        e.stopPropagation();
-    });
-
-    // === 鼠标滚轮缩放（模拟双指缩放） ===
-    cardImage.addEventListener('wheel', function(e) {
-        if (!cardImg) return;
-        e.preventDefault();
-
-        // 非zoom模式下滚轮缩放，自动进入zoom模式
-        if (!zoomEnabled) {
-            setZoomMode(true);
-        }
-
-        const rect = cardImage.getBoundingClientRect();
-        const anchorX = e.clientX - rect.left;
-        const anchorY = e.clientY - rect.top;
-
-        // 保存缩放前的状态
-        const prevScale = zoomScale;
-        const imgRect = cardImg.getBoundingClientRect();
-        const imgCX = imgRect.left + imgRect.width / 2;
-        const imgCY = imgRect.top + imgRect.height / 2;
-        const relX = anchorX - imgCX;
-        const relY = anchorY - imgCY;
-
-        // 根据滚轮方向调整缩放
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const newScale = Math.max(0.5, Math.min(4, zoomScale + delta));
-
-        if (newScale === zoomScale) return;
-
-        const scaleChange = newScale / zoomScale;
-        zoomScale = newScale;
-        applyImgSize();
-
-        // 以鼠标位置为锚点调整偏移
-        offsetX = offsetX - relX * (scaleChange - 1);
-        offsetY = offsetY - relY * (scaleChange - 1);
-        clampAllOffsets();
-
-        if (cardImg) cardImg.style.transition = 'none';
-        clearTimeout(cardImage._wheelTimer);
-        cardImage._wheelTimer = setTimeout(function() {
-            if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
-        }, 150);
-    }, { passive: false });
-
-    // === 统一拖拽（Pointer Events + setPointerCapture） ===
-    let pointerDown = false, lastPX = 0, lastPY = 0;
-    let pointerId = null;
-
-    function onPointerDown(e) {
-        if (e.target === zoomBtn) return;
-        pointerDown = true;
-        pointerId = e.pointerId;
-        lastPX = e.clientX; lastPY = e.clientY;
-        cardImage.setPointerCapture(e.pointerId);
-        onDragStart();
-        if (zoomEnabled) { cardImage.classList.add('dragging'); }
-    }
-
-    function onPointerMove(e) {
-        if (!pointerDown || e.pointerId !== pointerId) return;
-        const result = onDragMove(e.clientX, e.clientY, lastPX, lastPY);
-        if (result) { lastPX = result.x; lastPY = result.y; }
-    }
-
-    function onPointerUp(e) {
-        if (!pointerDown || e.pointerId !== pointerId) return;
-        pointerDown = false;
-        pointerId = null;
-        onDragEnd();
-        cardImage.classList.remove('dragging');
-        try { cardImage.releasePointerCapture(e.pointerId); } catch(ex) {}
-    }
-
-    cardImage.addEventListener('pointerdown', onPointerDown);
-    cardImage.addEventListener('pointermove', onPointerMove);
-    cardImage.addEventListener('pointerup', onPointerUp);
-    cardImage.addEventListener('pointercancel', onPointerUp);
-
-    // === 触摸双指缩放 ===
-    let pinchActive = false;
-
-    function onTouchStart(e) {
-        if (e.target === zoomBtn) return;
-        if (e.touches.length === 2) {
-            pinchActive = true;
-            onPinchStart(e.touches[0], e.touches[1]);
-            return;
-        }
-        pinchActive = false;
-        pinchStartDist = 0;
-    }
-
-    function onTouchMove(e) {
-        if (e.touches.length === 2 && pinchActive) {
-            onPinchMove(e.touches[0], e.touches[1]);
-            e.preventDefault();
-        }
-    }
-
-    function onTouchEnd(e) {
-        if (pinchActive && e.touches.length < 2) {
-            pinchActive = false;
-            onPinchEnd();
-        }
-    }
-
-    cardImage.addEventListener('touchstart', onTouchStart, { passive: false });
-    cardImage.addEventListener('touchmove', onTouchMove, { passive: false });
-    cardImage.addEventListener('touchend', onTouchEnd);
-
-    // 清理函数
-    cardImage._cleanup = function() {
-        cardImage.removeEventListener('pointerdown', onPointerDown);
-        cardImage.removeEventListener('pointermove', onPointerMove);
-        cardImage.removeEventListener('pointerup', onPointerUp);
-        cardImage.removeEventListener('pointercancel', onPointerUp);
-        cardImage.removeEventListener('touchstart', onTouchStart);
-        cardImage.removeEventListener('touchmove', onTouchMove);
-        cardImage.removeEventListener('touchend', onTouchEnd);
-    };
 }
 
 // ========== 卡片渲染 ==========

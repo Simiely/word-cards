@@ -250,6 +250,7 @@
 <div class="loading-dot" id="loadingDot">🦁</div>
 
 <script src="animal-data.js"></script>
+<script src="image-interaction.js"></script>
 <script>
 // ========== 动物数据（来自 animal-data.js） ==========
 
@@ -416,155 +417,9 @@ function playAnimalSoundPop(animal) {
 // ========== 卡片弹出 ==========
 var currentPopIndex = -1;
 
-// 图片交互状态
-var popZoomEnabled = false;
-var popZoomScale = 1;
-var popBaseScale = 1;
-var popOffsetX = 0, popOffsetY = 0;
-var popCardImg = null;
 
-function popGetImgBaseSize() {
-    if (!popCardImg || !popCardImg.naturalWidth) return { w: 0, h: 0 };
-    var cw = popCardImage.clientWidth;
-    var ch = popCardImage.clientHeight;
-    var iw = popCardImg.naturalWidth;
-    var ih = popCardImg.naturalHeight;
-    popBaseScale = Math.max(cw / iw, ch / ih);
-    return { w: iw * popBaseScale, h: ih * popBaseScale };
-}
-
-function popApplyImgSize() {
-    if (!popCardImg) return;
-    var size = popGetImgBaseSize();
-    var sw = size.w * popZoomScale;
-    var sh = size.h * popZoomScale;
-    var cw = popCardImage.clientWidth;
-    var ch = popCardImage.clientHeight;
-    popCardImg.style.width = sw + 'px';
-    popCardImg.style.height = sh + 'px';
-    popCardImg.style.left = ((cw - sw) / 2) + 'px';
-    popCardImg.style.top = ((ch - sh) / 2) + 'px';
-}
-
-function popClampAllOffsets() {
-    if (!popCardImg) return;
-    var cw = popCardImage.clientWidth;
-    var ch = popCardImage.clientHeight;
-    var imgW = parseFloat(popCardImg.style.width) || cw;
-    var imgH = parseFloat(popCardImg.style.height) || ch;
-    var maxDX = Math.max(0, (imgW - cw) / 2);
-    var maxDY = Math.max(0, (imgH - ch) / 2);
-    popOffsetX = Math.max(-maxDX, Math.min(maxDX, popOffsetX));
-    popOffsetY = Math.max(-maxDY, Math.min(maxDY, popOffsetY));
-    popApplyOffset();
-}
-
-function popApplyOffset() {
-    if (!popCardImg) return;
-    popCardImg.style.transform = 'translate(' + popOffsetX + 'px, ' + popOffsetY + 'px)';
-}
-
-function popSetZoomMode(on) {
-    popZoomEnabled = on;
-    if (on) {
-        popCardImage.classList.add('zoom-mode');
-        popZoomScale = 1;
-        popOffsetX = 0; popOffsetY = 0;
-        popApplyImgSize();
-        if (popCardImg) { popCardImg.style.transition = 'transform 0.3s ease'; popCardImg.style.transform = ''; }
-        popUpdateZoomIcon();
-    } else {
-        popCardImage.classList.remove('zoom-mode', 'dragging');
-        popZoomScale = 1;
-        popOffsetX = 0; popOffsetY = 0;
-        if (popCardImg) {
-            popCardImg.style.transition = 'transform 0.3s ease';
-            popCardImg.style.transform = '';
-            popCardImg.style.width = '100%';
-            popCardImg.style.height = '100%';
-            popCardImg.style.left = '0';
-            popCardImg.style.top = '0';
-        }
-        popUpdateZoomIcon();
-    }
-}
-
-function popUpdateZoomIcon() {
-    var btn = popCardImage.querySelector('.zoom-toggle');
-    if (!btn) return;
-    if (popZoomEnabled) {
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>';
-        btn.title = '缩小查看完整图片';
-    } else {
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg>';
-        btn.title = '放大填充';
-    }
-}
-
-function popOnDragStart() {
-    if (!popZoomEnabled) return;
-    if (popCardImg) popCardImg.style.transition = 'none';
-}
-
-function popOnDragMove(ex, ey, prevX, prevY) {
-    if (!popZoomEnabled) return;
-    var dx = ex - prevX;
-    var dy = ey - prevY;
-    popOffsetX += dx;
-    popOffsetY += dy;
-    popClampAllOffsets();
-    return { x: ex, y: ey };
-}
-
-function popOnDragEnd() {
-    if (!popZoomEnabled) return;
-    if (popCardImg) popCardImg.style.transition = 'transform 0.15s ease';
-}
-
-// 双指缩放
-var popPinchStartDist = 0;
-var popPinchStartScale = 1;
-var popPinchStartOX = 0, popPinchStartOY = 0;
-
-function popOnPinchStart(t1, t2) {
-    if (!popZoomEnabled) { popSetZoomMode(true); }
-    popPinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-    popPinchStartScale = popZoomScale;
-    popPinchStartOX = popOffsetX;
-    popPinchStartOY = popOffsetY;
-    if (popCardImg) popCardImg.style.transition = 'none';
-}
-
-function popOnPinchMove(t1, t2) {
-    if (popPinchStartDist === 0) return;
-    var newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-    var ratio = newDist / popPinchStartDist;
-    var newScale = Math.max(0.5, Math.min(4, popPinchStartScale * ratio));
-    var cx = (t1.clientX + t2.clientX) / 2;
-    var cy = (t1.clientY + t2.clientY) / 2;
-    var rect = popCardImage.getBoundingClientRect();
-    var anchorX = cx - rect.left;
-    var anchorY = cy - rect.top;
-    var imgRect = popCardImg.getBoundingClientRect();
-    var imgCX = imgRect.left + imgRect.width / 2;
-    var imgCY = imgRect.top + imgRect.height / 2;
-    var relX = anchorX - imgCX;
-    var relY = anchorY - imgCY;
-    var scaleChange = newScale / popZoomScale;
-    popZoomScale = newScale;
-    popApplyImgSize();
-    popOffsetX = popPinchStartOX - relX * (scaleChange - 1);
-    popOffsetY = popPinchStartOY - relY * (scaleChange - 1);
-    popClampAllOffsets();
-}
-
-function popOnPinchEnd() {
-    popPinchStartDist = 0;
-    if (popCardImg) popCardImg.style.transition = 'transform 0.15s ease';
-}
-
-// 清理上一次的图片事件
-var popCleanup = null;
+// 图片交互清理函数
+var popImageCleanup = null;
 
 function showCard(index) {
     currentPopIndex = index;
@@ -584,163 +439,23 @@ function showCard(index) {
         popEnName.textContent = a.en;
         popFact.textContent = a.fact;
 
-        // 重置缩放状态
-        popZoomEnabled = false;
-        popZoomScale = 1;
-        popOffsetX = 0; popOffsetY = 0;
+        // 清理旧交互
+        if (popImageCleanup) { popImageCleanup(); popImageCleanup = null; }
 
         // 渲染图片
         popCardImage.className = 'card-image';
         popCardImage.style.backgroundColor = '';
         popCardImage.innerHTML = '<img src="' + a.image + '" alt="' + a.zh + '" id="popImg"><button class="zoom-toggle" id="popZoomBtn" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button><button class="btn-close" id="btnClose2">✕</button>';
-        popCardImg = document.getElementById('popImg');
+        var popImg = document.getElementById('popImg');
         var popZoomBtn = document.getElementById('popZoomBtn');
         var btnClose2 = document.getElementById('btnClose2');
 
-        // 边缘平均色
-        popCardImg.addEventListener('load', function() {
-            if (!popCardImg.naturalWidth) return;
-            try {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-                var iw = popCardImg.naturalWidth, ih = popCardImg.naturalHeight;
-                canvas.width = iw; canvas.height = ih;
-                ctx.drawImage(popCardImg, 0, 0, iw, ih);
-                var top = ctx.getImageData(0, 0, iw, 1).data;
-                var bottom = ctx.getImageData(0, ih-1, iw, 1).data;
-                var left = ctx.getImageData(0, 0, 1, ih).data;
-                var right = ctx.getImageData(iw-1, 0, 1, ih).data;
-                var r = 0, g = 0, b = 0, count = 0;
-                function add(data) {
-                    for (var i = 0; i < data.length; i += 4) {
-                        r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-                    }
-                }
-                add(top); add(bottom); add(left); add(right);
-                r = Math.round(r / count);
-                g = Math.round(g / count);
-                b = Math.round(b / count);
-                popCardImage.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-            } catch(e) {}
+        // 初始化图片交互模块
+        popImageCleanup = initImageInteraction({
+            container: popCardImage,
+            img: popImg,
+            zoomBtn: popZoomBtn
         });
-
-        // Zoom 按钮
-        popZoomBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            popSetZoomMode(!popZoomEnabled);
-        });
-        popZoomBtn.addEventListener('pointerdown', function(e) {
-            e.stopPropagation();
-        });
-
-        // 鼠标滚轮缩放
-        popCardImage.addEventListener('wheel', function(e) {
-            if (!popCardImg) return;
-            e.preventDefault();
-            if (!popZoomEnabled) { popSetZoomMode(true); }
-            var rect = popCardImage.getBoundingClientRect();
-            var anchorX = e.clientX - rect.left;
-            var anchorY = e.clientY - rect.top;
-            var prevScale = popZoomScale;
-            var imgRect = popCardImg.getBoundingClientRect();
-            var imgCX = imgRect.left + imgRect.width / 2;
-            var imgCY = imgRect.top + imgRect.height / 2;
-            var relX = anchorX - imgCX;
-            var relY = anchorY - imgCY;
-            var delta = e.deltaY > 0 ? -0.1 : 0.1;
-            var newScale = Math.max(0.5, Math.min(4, popZoomScale + delta));
-            if (newScale === popZoomScale) return;
-            var scaleChange = newScale / popZoomScale;
-            popZoomScale = newScale;
-            popApplyImgSize();
-            popOffsetX = popOffsetX - relX * (scaleChange - 1);
-            popOffsetY = popOffsetY - relY * (scaleChange - 1);
-            popClampAllOffsets();
-            if (popCardImg) popCardImg.style.transition = 'none';
-            clearTimeout(popCardImage._wheelTimer);
-            popCardImage._wheelTimer = setTimeout(function() {
-                if (popCardImg) popCardImg.style.transition = 'transform 0.15s ease';
-            }, 150);
-        }, { passive: false });
-
-        // === Pointer Events 拖拽 ===
-        var pointerDown = false, lastPX = 0, lastPY = 0;
-        var pointerId = null;
-        var dragStartOX = 0, dragStartOY = 0;
-
-        function onPDown(e) {
-            if (e.target === popZoomBtn || e.target === btnClose2) return;
-            pointerDown = true;
-            pointerId = e.pointerId;
-            lastPX = e.clientX; lastPY = e.clientY;
-            dragStartOX = popOffsetX; dragStartOY = popOffsetY;
-            popCardImage.setPointerCapture(e.pointerId);
-            popOnDragStart();
-            if (popZoomEnabled) { popCardImage.classList.add('dragging'); }
-        }
-
-        function onPMove(e) {
-            if (!pointerDown || e.pointerId !== pointerId) return;
-            var result = popOnDragMove(e.clientX, e.clientY, lastPX, lastPY);
-            if (result) { lastPX = result.x; lastPY = result.y; }
-        }
-
-        function onPUp(e) {
-            if (!pointerDown || e.pointerId !== pointerId) return;
-            pointerDown = false;
-            pointerId = null;
-            popOnDragEnd();
-            popCardImage.classList.remove('dragging');
-            try { popCardImage.releasePointerCapture(e.pointerId); } catch(ex) {}
-        }
-
-        popCardImage.addEventListener('pointerdown', onPDown);
-        popCardImage.addEventListener('pointermove', onPMove);
-        popCardImage.addEventListener('pointerup', onPUp);
-        popCardImage.addEventListener('pointercancel', onPUp);
-
-        // === 触摸双指缩放 ===
-        var pinchActive = false;
-
-        function onTStart(e) {
-            if (e.target === popZoomBtn || e.target === btnClose2) return;
-            if (e.touches.length === 2) {
-                pinchActive = true;
-                popOnPinchStart(e.touches[0], e.touches[1]);
-                return;
-            }
-            pinchActive = false;
-            popPinchStartDist = 0;
-        }
-
-        function onTMove(e) {
-            if (e.touches.length === 2 && pinchActive) {
-                popOnPinchMove(e.touches[0], e.touches[1]);
-                e.preventDefault();
-            }
-        }
-
-        function onTEnd(e) {
-            if (pinchActive && e.touches.length < 2) {
-                pinchActive = false;
-                popOnPinchEnd();
-            }
-        }
-
-        popCardImage.addEventListener('touchstart', onTStart, { passive: false });
-        popCardImage.addEventListener('touchmove', onTMove, { passive: false });
-        popCardImage.addEventListener('touchend', onTEnd);
-
-        // 清理函数
-        popCleanup = function() {
-            popCardImage.removeEventListener('pointerdown', onPDown);
-            popCardImage.removeEventListener('pointermove', onPMove);
-            popCardImage.removeEventListener('pointerup', onPUp);
-            popCardImage.removeEventListener('pointercancel', onPUp);
-            popCardImage.removeEventListener('touchstart', onTStart);
-            popCardImage.removeEventListener('touchmove', onTMove);
-            popCardImage.removeEventListener('touchend', onTEnd);
-        };
 
         btnClose2.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -751,7 +466,6 @@ function showCard(index) {
         cardOverlay.addEventListener('click', function(e) {
             if (e.target === cardOverlay) closeCard();
         });
-
         cardOverlay.classList.add('active');
         markVisited(index);
         updateVisitedClass();
