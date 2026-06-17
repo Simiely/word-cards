@@ -304,34 +304,61 @@ function speakAndCopy(lang) {
     el._copyTimer = setTimeout(() => tip.classList.remove('show'), 1000);
 }
 
-// ========== 图片渲染 + 拖拽 + 缩放切换 ==========
+// ========== 图片渲染 + 拖拽 + 双指缩放 + 缩放切换 ==========
 let zoomEnabled = false;
 let dragAxis = null, offsetX = 0, offsetY = 0;
+let zoomScale = 1;      // 当前缩放倍率（相对于 cover 状态的基准）
+let baseScale = 1;      // cover 状态下的基准缩放比例
 let cardImg = null;
+
+function getImgBaseSize() {
+    if (!cardImg || !cardImg.naturalWidth) return { w: 0, h: 0 };
+    const cw = cardImage.clientWidth;
+    const ch = cardImage.clientHeight;
+    const iw = cardImg.naturalWidth;
+    const ih = cardImg.naturalHeight;
+    baseScale = Math.max(cw / iw, ch / ih);
+    return { w: iw * baseScale, h: ih * baseScale };
+}
+
+function applyImgSize() {
+    if (!cardImg) return;
+    const { w, h } = getImgBaseSize();
+    const sw = w * zoomScale;
+    const sh = h * zoomScale;
+    const cw = cardImage.clientWidth;
+    const ch = cardImage.clientHeight;
+    cardImg.style.width = sw + 'px';
+    cardImg.style.height = sh + 'px';
+    cardImg.style.left = ((cw - sw) / 2) + 'px';
+    cardImg.style.top = ((ch - sh) / 2) + 'px';
+}
+
+function clampAllOffsets() {
+    if (!cardImg) return;
+    const cw = cardImage.clientWidth;
+    const ch = cardImage.clientHeight;
+    const imgW = parseFloat(cardImg.style.width) || cw;
+    const imgH = parseFloat(cardImg.style.height) || ch;
+    const maxDX = Math.max(0, (imgW - cw) / 2);
+    const maxDY = Math.max(0, (imgH - ch) / 2);
+    offsetX = Math.max(-maxDX, Math.min(maxDX, offsetX));
+    offsetY = Math.max(-maxDY, Math.min(maxDY, offsetY));
+    applyOffset();
+}
 
 function setZoomMode(on) {
     zoomEnabled = on;
     if (on) {
         cardImage.classList.add('zoom-mode');
-        // 等比放大图片至短边填满容器
-        if (cardImg && cardImg.naturalWidth) {
-            const cw = cardImage.clientWidth;
-            const ch = cardImage.clientHeight;
-            const iw = cardImg.naturalWidth;
-            const ih = cardImg.naturalHeight;
-            // 短边填满：取 min scale（让短边刚好贴合，长边溢出）
-            const scale = Math.max(cw / iw, ch / ih);
-            cardImg.style.width = (iw * scale) + 'px';
-            cardImg.style.height = (ih * scale) + 'px';
-            // 居中
-            cardImg.style.left = ((cw - iw * scale) / 2) + 'px';
-            cardImg.style.top = ((ch - ih * scale) / 2) + 'px';
-        }
+        zoomScale = 1;
         offsetX = 0; offsetY = 0;
+        applyImgSize();
         if (cardImg) { cardImg.style.transition = 'transform 0.3s ease'; cardImg.style.transform = ''; }
         updateZoomIcon();
     } else {
         cardImage.classList.remove('zoom-mode', 'dragging');
+        zoomScale = 1;
         offsetX = 0; offsetY = 0;
         if (cardImg) {
             cardImg.style.transition = 'transform 0.3s ease';
@@ -363,21 +390,18 @@ function applyOffset() {
     cardImg.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 }
 
-function clampOffset() {
-    if (!cardImg || !dragAxis) return;
+function getOverflowAxis() {
+    if (!cardImg) return 'none';
     const cw = cardImage.clientWidth;
     const ch = cardImage.clientHeight;
-    const iw = cardImg.naturalWidth || cw;
-    const ih = cardImg.naturalHeight || ch;
-    // 图片等比放大至短边填满，计算溢出量
-    const scale = Math.max(cw / iw, ch / ih);
-    const displayW = iw * scale;
-    const displayH = ih * scale;
-    const maxDX = Math.max(0, (displayW - cw) / 2);
-    const maxDY = Math.max(0, (displayH - ch) / 2);
-    offsetX = Math.max(-maxDX, Math.min(maxDX, offsetX));
-    offsetY = Math.max(-maxDY, Math.min(maxDY, offsetY));
-    applyOffset();
+    const imgW = parseFloat(cardImg.style.width) || cw;
+    const imgH = parseFloat(cardImg.style.height) || ch;
+    const overflowX = imgW > cw + 2;
+    const overflowY = imgH > ch + 2;
+    if (overflowX && overflowY) return 'both';
+    if (overflowX) return 'x';
+    if (overflowY) return 'y';
+    return 'none';
 }
 
 function onDragStart() {
@@ -392,18 +416,10 @@ function onDragMove(ex, ey, prevX, prevY) {
     const dy = ey - prevY;
 
     if (dragAxis === null && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-        const cw = cardImage.clientWidth;
-        const ch = cardImage.clientHeight;
-        const iw = cardImg.naturalWidth || cw;
-        const ih = cardImg.naturalHeight || ch;
-        // 图片等比放大至短边填满，判断溢出方向
-        const scale = Math.max(cw / iw, ch / ih);
-        const overflowX = (iw * scale) > cw + 2;
-        const overflowY = (ih * scale) > ch + 2;
-        // 等比放大模式下，只有一个方向溢出
-        if (overflowX && overflowY) dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        else if (overflowX) dragAxis = 'x';
-        else if (overflowY) dragAxis = 'y';
+        const axis = getOverflowAxis();
+        if (axis === 'both') dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        else if (axis === 'x') dragAxis = 'x';
+        else if (axis === 'y') dragAxis = 'y';
         else dragAxis = 'none';
     }
 
@@ -411,7 +427,7 @@ function onDragMove(ex, ey, prevX, prevY) {
     else if (dragAxis === 'y') offsetY += dy;
     else return;
 
-    clampOffset();
+    clampAllOffsets();
     return { x: ex, y: ey };
 }
 
@@ -421,10 +437,70 @@ function onDragEnd() {
     dragAxis = null;
 }
 
+// ========== 双指缩放 ==========
+let pinchStartDist = 0;
+let pinchStartScale = 1;
+let pinchCenterX = 0, pinchCenterY = 0;
+let pinchStartOffsetX = 0, pinchStartOffsetY = 0;
+
+function getTouchDist(t1, t2) {
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+}
+
+function getTouchCenter(t1, t2) {
+    return {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+    };
+}
+
+function onPinchStart(t1, t2) {
+    if (!zoomEnabled) return;
+    pinchStartDist = getTouchDist(t1, t2);
+    pinchStartScale = zoomScale;
+    pinchStartOffsetX = offsetX;
+    pinchStartOffsetY = offsetY;
+    const c = getTouchCenter(t1, t2);
+    pinchCenterX = c.x; pinchCenterY = c.y;
+    if (cardImg) cardImg.style.transition = 'none';
+}
+
+function onPinchMove(t1, t2) {
+    if (!zoomEnabled || pinchStartDist === 0) return;
+    const newDist = getTouchDist(t1, t2);
+    const ratio = newDist / pinchStartDist;
+    const newScale = Math.max(0.5, Math.min(4, pinchStartScale * ratio));
+
+    // 以双指中心为锚点缩放
+    const c = getTouchCenter(t1, t2);
+    const rect = cardImage.getBoundingClientRect();
+    const anchorX = c.x - rect.left;
+    const anchorY = c.y - rect.top;
+    const imgRect = cardImg.getBoundingClientRect();
+    const imgCX = imgRect.left + imgRect.width / 2;
+    const imgCY = imgRect.top + imgRect.height / 2;
+    const relX = anchorX - imgCX;
+    const relY = anchorY - imgCY;
+
+    const scaleChange = newScale / zoomScale;
+    zoomScale = newScale;
+    applyImgSize();
+
+    offsetX = pinchStartOffsetX - relX * (scaleChange - 1);
+    offsetY = pinchStartOffsetY - relY * (scaleChange - 1);
+    clampAllOffsets();
+}
+
+function onPinchEnd() {
+    pinchStartDist = 0;
+    if (cardImg) cardImg.style.transition = 'transform 0.15s ease';
+}
+
 function renderImage() {
     const animal = animals[currentIndex];
     const hasImage = animal.image && animal.image.length > 0;
     zoomEnabled = false;
+    zoomScale = 1;
     dragAxis = null;
     offsetX = 0; offsetY = 0;
 
@@ -505,18 +581,34 @@ function renderImage() {
         if (zoomEnabled) { cardImage.classList.add('dragging'); e.preventDefault(); }
     };
 
-    // === 触摸拖拽 ===
+    // === 触摸拖拽 + 双指缩放 ===
     let touchId = null, lastTX = 0, lastTY = 0;
+    let pinchActive = false;
+
     cardImage.ontouchstart = function(e) {
         if (e.target === zoomBtn) return;
-        if (e.touches.length !== 1) { touchId = null; return; }
+        if (e.touches.length === 2) {
+            // 双指缩放
+            touchId = null;
+            pinchActive = true;
+            onPinchStart(e.touches[0], e.touches[1]);
+            return;
+        }
+        if (e.touches.length !== 1) { touchId = null; pinchActive = false; return; }
+        pinchActive = false;
+        pinchStartDist = 0;
         const t = e.touches[0];
         touchId = t.identifier;
         lastTX = t.clientX; lastTY = t.clientY;
         onDragStart();
     };
     cardImage.ontouchmove = function(e) {
-        if (touchId === null) return;
+        if (e.touches.length === 2 && pinchActive) {
+            onPinchMove(e.touches[0], e.touches[1]);
+            e.preventDefault();
+            return;
+        }
+        if (touchId === null || pinchActive) return;
         const t = Array.from(e.touches).find(tt => tt.identifier === touchId);
         if (!t) return;
         const result = onDragMove(t.clientX, t.clientY, lastTX, lastTY);
@@ -524,6 +616,11 @@ function renderImage() {
         if (dragAxis && dragAxis !== 'none') e.preventDefault();
     };
     cardImage.ontouchend = function(e) {
+        if (pinchActive && e.touches.length < 2) {
+            pinchActive = false;
+            onPinchEnd();
+            return;
+        }
         if (touchId === null) return;
         const remaining = Array.from(e.touches).find(tt => tt.identifier === touchId);
         if (remaining) return;
