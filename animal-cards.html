@@ -178,6 +178,8 @@
     </style>
 </head>
 <body>
+<!-- iOS SpeechSynthesis 激活按钮 -->
+<button id="speechActivator" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;">.</button>
 <div class="container">
     <div class="header">
         <div class="badge">动物卡片学习</div>
@@ -187,9 +189,9 @@
         <div class="card-image" id="cardImage"></div>
         <div class="card-body">
             <div class="animal-emoji" id="animalEmoji"></div>
-            <div class="zh-name" id="zhName" ontouchend="speakAndCopy('zh');return false;" onclick="speakAndCopy('zh')"></div>
-            <div class="en-name" id="enName" ontouchend="speakAndCopy('en');return false;" onclick="speakAndCopy('en')"></div>
-            <div class="fact" id="fact" ontouchend="speak('fact');return false;" onclick="speak('fact')"></div>
+            <div class="zh-name" id="zhName"></div>
+            <div class="en-name" id="enName"></div>
+            <div class="fact" id="fact"></div>
         </div>
     </div>
     <div class="nav">
@@ -274,45 +276,42 @@ function playAnimalSound() {
 let speechReady = false;
 let lastSpeakText = '';
 
-// 预加载 voices（iOS 需要）
-function warmUpSpeech() {
+// iOS: 通过真实 button click 激活 SpeechSynthesis
+function activateSpeech() {
     if (speechReady) return;
-    // 加载 voices 列表来激活引擎
-    var voices = speechSynthesis.getVoices();
-    if (voices.length === 0) {
-        speechSynthesis.addEventListener('voiceschanged', function() {
-            speechReady = true;
-        }, { once: true });
-    } else {
-        speechReady = true;
-    }
+    var activator = document.getElementById('speechActivator');
+    if (!activator) return;
+    // 让按钮可点击一瞬间
+    activator.style.pointerEvents = 'auto';
+    activator.focus();
+    activator.click();
+    activator.style.pointerEvents = 'none';
+    // 发一个无声 utterance 激活引擎
+    var u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    u.rate = 1;
+    speechSynthesis.speak(u);
+    speechReady = true;
 }
 
 function speak(lang) {
     try {
-        warmUpSpeech();
+        activateSpeech();
         var animal = animals[currentIndex];
         var text;
         if (lang === 'zh') text = animal.zh;
         else if (lang === 'en') text = animal.en;
         else if (lang === 'fact') text = animal.fact;
 
-        // 避免重复朗读相同内容
         if (text === lastSpeakText && speechSynthesis.speaking) return;
         lastSpeakText = text;
 
-        // 不 cancel，直接创建新的 utterance 并 speak
-        // iOS 上 cancel 是异步的，会导致后续 speak 被吞
+        if (speechSynthesis.paused) speechSynthesis.resume();
+
         var u = new SpeechSynthesisUtterance(text);
         u.lang = lang === 'en' ? 'en-US' : 'zh-CN';
         u.rate = 0.85;
         u.volume = 1;
-
-        // 确保引擎没暂停
-        if (speechSynthesis.paused) {
-            speechSynthesis.resume();
-        }
-
         speechSynthesis.speak(u);
     } catch(e) {}
 }
@@ -743,6 +742,14 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
     if (e.key === 'ArrowRight') goTo(currentIndex + 1);
     if (e.key === ' ') { e.preventDefault(); goRandom(); }
+});
+
+// ========== 文字点击发音（事件代理） ==========
+document.getElementById('card').addEventListener('pointerup', function(e) {
+    var target = e.target;
+    if (target === zhNameEl) { speakAndCopy('zh'); }
+    else if (target === enNameEl) { speakAndCopy('en'); }
+    else if (target === factEl) { speak('fact'); }
 });
 
 // ========== 启动 ==========
