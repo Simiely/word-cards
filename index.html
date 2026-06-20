@@ -138,7 +138,7 @@
         <a class="category-card" href="animal-cards.html">
             <div class="cat-emoji">🦁</div>
             <div class="cat-name">动物</div>
-            <div class="cat-count">21 种</div>
+            <div class="cat-count" id="animalCount">21 种</div>
         </a>
 
         <!-- 水果 — 即将推出 -->
@@ -190,7 +190,16 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/word-cards/sw.js').catch(function(){});
 }
 </script>
+<script src="animal-data.js"></script>
 <script>
+// ========== 动态填充动物数量 ==========
+(function() {
+    var el = document.getElementById('animalCount');
+    if (el && typeof animals !== 'undefined') {
+        el.textContent = animals.length + ' 种';
+    }
+})();
+
 // ========== 首页离线运行按钮 ==========
 var offlineHomeActive = false;
 
@@ -205,7 +214,7 @@ function goOfflineHome() {
         return;
     }
 
-    // 资源清单（与 animal-cards.html 的离线按钮一致）
+    // 资源清单：核心文件
     var urls = [
         '/word-cards/',
         '/word-cards/index.html',
@@ -215,16 +224,14 @@ function goOfflineHome() {
         '/word-cards/image-interaction.js',
         '/word-cards/manifest.json'
     ];
-    // 图片
-    var imgs = ['butterfly','cat','chicken','cow','dog','dolphin','duck','elephant','fish','frog','giraffe','horse','lion','monkey','panda','penguin','rabbit','shark','sheep','tiger','zebra'];
-    for (var i = 0; i < imgs.length; i++) {
-        urls.push('animal/images/' + imgs[i] + '.jpg');
-    }
-    // 音频
-    for (var i = 0; i < imgs.length; i++) {
-        urls.push('animal/speech_zh/' + imgs[i] + '.mp3');
-        urls.push('animal/speech_en/' + imgs[i] + '.mp3');
-        urls.push('animal/speech_fact/' + imgs[i] + '.mp3');
+    // 从 animal-data.js 动态收集全部动物的图片和音频
+    for (var i = 0; i < animals.length; i++) {
+        var a = animals[i];
+        if (a.image) urls.push(a.image);
+        if (a.speech_zh) urls.push(a.speech_zh);
+        if (a.speech_en) urls.push(a.speech_en);
+        if (a.speech_fact) urls.push(a.speech_fact);
+        if (a.sound) urls.push(a.sound);
     }
 
     offlineHomeActive = true;
