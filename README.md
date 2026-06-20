@@ -1,64 +1,30 @@
 # Word Cards — 儿童双语学习卡片
 
-面向学龄前及小学低年级儿童的交互式双语学习卡片项目，帮助孩子在趣味中学习中文和英文词汇。
+面向学龄前及小学低年级儿童的交互式双语学习卡片，纯静态零依赖，帮助孩子在趣味中学习中文和英文词汇。
 
-📍 **在线访问**：[https://simiely.github.io/word-cards/](https://simiely.github.io/word-cards/)
-
----
-
-## 整体规划
-
-```
-首页 (index.html)
-├── 🦁 动物卡片     ← ✅ 已完成
-├── 🍎 水果卡片     (待规划)
-├── 🚗 交通工具     (待规划)
-├── 🌈 颜色形状     (待规划)
-├── 🔢 数字         (待规划)
-├── 👋 身体部位     (待规划)
-└── ...更多类别
-```
+📍 **在线访问**：[simiely.github.io/word-cards](https://simiely.github.io/word-cards/)
 
 ---
 
-## 动物卡片 — 功能概览
+## 功能
 
-### 两种学习模式
+### 两种模式
 
-| 模式 | 页面 | 说明 |
+| 模式 | 页面 | 特点 |
 |------|------|------|
-| **卡片模式** | `animal-cards.html` | 随机洗牌排序，顺序翻阅，滑动窗口预加载 |
-| **浏览模式** | `animal-select.html` | 拼音排序，瀑布流方阵，自由选择，弹出卡片详情 |
+| 卡片模式 | `animal-cards.html` | 随机排序顺序翻阅，滑动窗口预加载，支持滑动翻页 |
+| 浏览模式 | `animal-select.html` | 拼音排序瀑布流方阵，自由选择弹出卡片详情 |
 
-### 动物种类
+### 核心功能
 
-当前数据由 `animal-data.js` 动态驱动，页面自动适配，无需手动修改数量。
-
-### 交互功能
-
-- **双语学习**：中文名称 + 英文名称，点击朗读发音
-- **科普知识**：每种动物配有中文科普描述，点击朗读
-- **实拍照片**：真实动物照片（WebP 格式），支持以下交互：
-  - 缩放模式切换（右下角按钮）
-  - 鼠标滚轮缩放（以光标为锚点）
-  - 双指缩放（移动端）
-  - 自由拖拽平移
-  - 边缘平均色背景（图片加载后异步提取，不阻塞渲染）
-- **叫声播放**：点击卡片上的 emoji 播放当前动物叫声
-- **浏览模式**：
-  - 瀑布流方阵（自适应 2/3/4 列）
-  - 按中文名拼音首字母排序
-  - emoji 平均色方块背景
-  - 已浏览动物 10% 透明度标记
-  - 「再来一次」清除浏览记录
-- **滑动窗口预加载**：当前卡片 + 后方 3 张 + 前方 1 张，翻页零等待
-- **左右滑动翻页**：在卡片文字区域左右滑动切换上/下一张（zoom 模式下自动禁用）
-- **加载动画**：呼吸缩放 emoji，加载完成后自动淡出
-- **循环导航**：上一个 / 下一个 / 重新洗牌，键盘快捷键 + 手势滑动
-- **高分辨率适配**：自适应 3:4 竖版高分辨率平板
-- **响应式图片**：400w / 800w / 原图三档 srcset，按屏幕宽度自动选择，移动端省 90% 流量
-- **PWA 支持**：可添加到主屏幕
-- **离线运行**：点击「📡 离线运行」按钮，一键下载全部资源到本地，断网也能用
+- 双语学习：中文名 + 英文名 + 科普描述，点击朗读
+- 实拍照片：WebP 响应式图片（400w/800w/原图三档），缩放/拖拽/双指缩放/边缘色背景
+- 滑动窗口预加载：当前 + 前1 + 后3，翻页零等待
+- 左右滑动翻页：全卡片区域手势，zoom 模式自动禁用
+- 离线运行：一键下载全部资源到本地，断网可用
+- PWA 支持：可添加到主屏幕
+- 浏览模式特有：已访问 10% 透明度标记、再来一次清除记录
+- 图片失败兜底：显示 emoji + 重试按钮
 
 ---
 
@@ -66,24 +32,19 @@
 
 ```
 word-cards/
-├── index.html              ← 首页（类别入口 + 离线运行按钮）
-├── animal-cards.html       ← 动物卡片模式
-├── animal-select.html      ← 动物浏览模式
-├── animal-data.js          ← 共享数据源（动物数据，动态驱动）
-├── image-interaction.js    ← 公共图片交互模块（缩放/拖拽/双指缩放/边缘色）
-├── common.css              ← 公共样式表（三页面共享）
-├── common.js               ← 公共 JS 模块（SW注册/音频播放/离线按钮）
-├── sw.js                   ← Service Worker（离线缓存 + 加速）
-├── manifest.json           ← PWA 配置
-├── README.md
-├── dev-log/                ← 开发日志
-│   └── README.md
+├── index.html              # 首页
+├── animal-cards.html       # 卡片模式
+├── animal-select.html      # 浏览模式
+├── animal-data.js          # 动物数据（唯一数据源，动态驱动）
+├── image-interaction.js    # 图片缩放/拖拽交互模块
+├── common.css / common.js  # 公共样式与逻辑
+├── sw.js                   # Service Worker 离线缓存
+├── manifest.json           # PWA 配置
+├── dev-log/README.md       # 开发日志
 └── animal/
-    ├── images/             ← 动物实拍照片（WebP，含原图 + 400w + 800w 多尺寸）
-    ├── speech_zh/          ← 中文名称语音（Edge TTS MP3）
-    ├── speech_en/          ← 英文名称语音（Edge TTS MP3）
-    ├── speech_fact/        ← 科普描述语音（Edge TTS MP3）
-    └── sounds_normalized/  ← 动物叫声 MP3（待添加）
+    ├── images/             # WebP 图片（原图 + 400w + 800w）
+    ├── speech_zh/en/fact/  # Edge TTS 语音
+    └── sounds_normalized/  # 动物叫声（待添加）
 ```
 
 ---
@@ -92,143 +53,53 @@ word-cards/
 
 | 技术 | 用途 |
 |------|------|
-| HTML/CSS/JS（无框架） | 纯静态页面，零依赖 |
-| WebP + srcset | 响应式图片，多尺寸按屏幕自动选择，移动端省 90% 流量 |
-| Service Worker | 离线缓存 + 加载加速（三级缓存策略） |
-| common.css / common.js | 公共样式与逻辑模块，消除三页面重复代码 |
-| Edge TTS | 预录制 MP3 语音，全平台兼容（含 iOS Safari） |
-| Canvas API | 图片边缘色提取、emoji 平均色提取 |
-| Pointer Events + setPointerCapture | 跨设备拖拽和缩放 |
-| GitHub Pages | 静态托管，自动部署 |
-| localStorage | 浏览记录持久化 |
-| PWA Manifest | 添加到主屏幕 |
+| HTML/CSS/JS（零依赖） | 纯静态页面 |
+| WebP + srcset | 响应式图片，移动端省 90% 流量 |
+| Service Worker（v5） | 离线缓存，三级缓存策略 |
+| Canvas API | 边缘色提取（异步，不阻塞渲染） |
+| Pointer Events | 跨设备拖拽缩放 |
+| Edge TTS | 预录制 MP3 语音 |
 
 ---
 
-## 语音文件生成
+## 模块
 
-使用 Edge TTS 生成中文/英文/科普语音：
-
-```bash
-pip install edge-tts
-
-# 中文名称
-edge-tts --voice zh-CN-XiaoxiaoNeural --text "狮子" --write-media animal/speech_zh/lion.mp3
-
-# 英文名称
-edge-tts --voice en-US-AriaNeural --text "Lion" --write-media animal/speech_en/lion.mp3
-
-# 科普描述
-edge-tts --voice zh-CN-XiaoxiaoNeural --text "狮子是唯一群居的猫科动物..." --write-media animal/speech_fact/lion.mp3
-```
-
-### 多音字处理
-
-Edge TTS 对部分多音字可能读错声调（如"蛙"读四声）。解决方案：
-
-1. **拆分拼接**：将词拆为单字分别生成，用 pydub 拼接
-   ```bash
-   edge-tts --voice zh-CN-XiaoxiaoNeural --text "青" --write-media qing.mp3
-   edge-tts --voice zh-CN-XiaoxiaoNeural --text "挖" --write-media wa.mp3
-   python3 -c "
-   from pydub import AudioSegment
-   (AudioSegment.from_mp3('qing.mp3') + AudioSegment.from_mp3('wa.mp3')).export('frog.mp3', format='mp3')
-   "
-   ```
-
-2. **从 fact 语音截取**：fact 描述中的读音通常正确，可从中截取
-   ```bash
-   python3 -c "
-   from pydub import AudioSegment
-   fact = AudioSegment.from_mp3('animal/speech_fact/frog.mp3')
-   fact[100:500].export('animal/speech_zh/frog.mp3', format='mp3')
-   "
-   ```
+- **`animal-data.js`** — 唯一数据源。新增动物只需追加一条，所有页面自动适配
+- **`image-interaction.js`** — `initImageInteraction(config)` 返回 `cleanup()`，封装缩放/拖拽/双指/边缘色
+- **`common.css`** — `:root` 变量、reset、pulse 动画、card-image/zoom-toggle/card-body 公共样式
+- **`common.js`** — `registerSW()`、`speak()`、`playAnimalSound()`、`collectOfflineUrls()`、`initOfflineButton()`
+- **`sw.js`** — 核心文件 Network First，图片音频 Stale-While-Revalidate，支持 MessageChannel 全量下载
 
 ---
 
 ## 本地运行
 
 ```bash
-# 使用 Python HTTP 服务器
 python3 -m http.server 8080
-
-# 访问
-#   首页:    http://localhost:8080/
-#   卡片模式: http://localhost:8080/animal-cards.html
-#   浏览模式: http://localhost:8080/animal-select.html
+# 首页:    http://localhost:8080/
+# 卡片模式: http://localhost:8080/animal-cards.html
+# 浏览模式: http://localhost:8080/animal-select.html
 ```
-
-也可以直接双击打开 `index.html`（部分浏览器可能因 CORS 限制导致音频播放异常，推荐使用 HTTP 服务器）。
 
 ---
 
-## 模块说明
-
-### `animal-data.js`
-共享的动物数据源，包含动物的中英文名称、emoji、图片路径（WebP 多尺寸）、语音路径和科普描述。两个模式页面和首页通过 `<script src>` 引用。**新增动物只需在此文件追加一条数据**，所有页面自动适配，无需修改其他文件。
-
-### `image-interaction.js`
-公共图片交互模块，提供 `initImageInteraction(config)` 函数。封装了缩放切换、鼠标/触摸拖拽、双指缩放、滚轮缩放、边缘色提取等功能。边缘色提取使用 `requestIdleCallback` 异步执行，不阻塞渲染。返回 `cleanup()` 函数用于解绑事件。
-
-```js
-var cleanup = initImageInteraction({
-    container: cardImage,  // 图片容器 DOM
-    img: cardImg,          // <img> 元素
-    zoomBtn: zoomBtn       // 缩放切换按钮
-});
-// 切换图片时调用 cleanup() 清理旧事件
-```
-
-### `common.css`
-三页面共享的公共样式表。提取了 `:root` CSS 变量、全局 reset、body 基础样式、`@keyframes pulse` 动画、`.card-image` / `.zoom-toggle` / `.card-body` 系列公共样式，以及离线按钮状态样式。各页面仅保留独有的布局和组件样式。
-
-### `common.js`
-三页面共享的公共 JS 模块。提供以下通用函数：
-
-| 函数 | 说明 |
-|------|------|
-| `registerSW()` | Service Worker 注册 |
-| `speak(lang, animal)` | 语音朗读（复用单例 Audio） |
-| `playAnimalSound(animal)` | 动物叫声播放（复用单例 Audio） |
-| `collectOfflineUrls()` | 收集全部资源 URL（核心文件 + 动物图片音频） |
-| `initOfflineButton(btn, opts)` | 离线运行按钮通用逻辑（进度回报 + 状态切换） |
-
-### `sw.js`
-Service Worker 模块，实现离线缓存与加载加速。
-
-- **核心文件**（HTML/JS/CSS）：Network First 策略，优先最新内容，离线回退缓存
-- **图片/音频**：Stale-While-Revalidate 策略，瞬间返回缓存，后台静默更新
-- **离线运行按钮**：页面通过 `MessageChannel` 向 SW 发送全量下载指令，实时回报进度
-- **版本管理**：`CACHE_VERSION` 升级后自动清理旧缓存
-
----
-
-## 新增类别指南
-
-借助已有模块，新增一个类别只需：
+## 新增类别
 
 1. 创建 `{category}-data.js`（参考 `animal-data.js`）
-2. 准备素材：图片（`{category}/images/`）、语音（`{category}/speech_zh/` 等）
-3. 复制 `animal-cards.html`，修改标题和数据源引用
-4. 在 `index.html` 中激活对应类别卡片
+2. 准备素材：图片（WebP 多尺寸）+ 语音 MP3
+3. 复制 `animal-cards.html`，修改数据源引用
+4. 在 `index.html` 激活类别卡片
 
 ---
 
 ## 后续规划
 
-- [ ] 水果卡片类别
-- [ ] 交通工具类别
-- [ ] 颜色形状类别
-- [ ] 数字类别
-- [ ] 身体部位类别
-- [ ] 补齐动物叫声 MP3
-- [x] ~~Service Worker 离线缓存~~ ✅ 已完成（`sw.js`）
-- [x] ~~图片转 WebP 优化~~ ✅ 已完成（14MB → 5.8MB）
-- [x] ~~公共 CSS / JS 模块提取~~ ✅ 已完成（`common.css` + `common.js`）
-- [x] ~~响应式图片 srcset~~ ✅ 已完成（400w / 800w / 原图三档）
-- [x] ~~左右滑动翻页~~ ✅ 已完成（文字区域滑动手势）
-- [ ] 学习进度统计
-- [ ] 语音朗读视觉反馈
-- [ ] PWA 正式 PNG 图标
-- [ ] Service Worker 缓存版本自动升级
+**待开发**：水果 / 交通工具 / 颜色形状 / 数字 / 身体部位 / 动物叫声 / 学习统计 / 朗读视觉反馈
+
+**已完成**：
+- [x] Service Worker 离线缓存
+- [x] 图片 JPG → WebP（14MB → 5.8MB）
+- [x] 公共 CSS / JS 模块
+- [x] 响应式图片 srcset
+- [x] 左右滑动翻页
+- [x] 事件泄漏修复 / Edge Color 异步化 / 音频对象复用 / 图片失败兜底
