@@ -7,7 +7,7 @@
 // 支持页面发送消息触发「一键离线」全量缓存
 // ============================================================
 
-var CACHE_VERSION = 'v4';
+var CACHE_VERSION = 'v5';
 var CACHE_NAME = 'word-cards-' + CACHE_VERSION;
 
 // 核心文件列表（安装时预缓存）
@@ -18,6 +18,8 @@ var PRECACHE_URLS = [
   '/word-cards/animal-select.html',
   '/word-cards/animal-data.js',
   '/word-cards/image-interaction.js',
+  '/word-cards/common.js',
+  '/word-cards/common.css',
   '/word-cards/manifest.json'
 ];
 

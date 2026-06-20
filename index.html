@@ -7,21 +7,9 @@
     <link rel="preconnect" href="https://simiely.github.io">
     <meta name="theme-color" content="#4a7c59">
     <title>Word Cards — 儿童双语学习卡片</title>
+    <link rel="stylesheet" href="common.css">
     <style>
-        :root {
-            --bg: #f5f0e8;
-            --card-bg: #ffffff;
-            --primary: #4a7c59;
-            --accent: #e8a87c;
-            --text: #3c3c3c;
-            --radius: 24px;
-            --safe-top: env(safe-area-inset-top, 0px);
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-        }
-        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family: 'Segoe UI','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
-            background: var(--bg);
             background-image:
                 radial-gradient(ellipse at 20% 50%, rgba(74,124,89,0.05) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(232,168,124,0.06) 0%, transparent 50%),
@@ -29,9 +17,6 @@
             min-height: 100dvh;
             padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)) 16px;
             display: flex; flex-direction: column; align-items: center;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .page {
@@ -114,10 +99,6 @@
         .btn-offline-home:active { background: #4285f4; color: #fff; }
         .btn-offline-home.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
         .btn-offline-home.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
         .offline-hint {
             display: block; font-size: 12px; color: #888; margin-top: 8px;
         }
@@ -180,18 +161,15 @@
     <div class="footer">Made with ❤️ for kids</div>
 
     <div class="offline-bar">
-        <button class="btn-offline-home" id="btnOfflineHome" onclick="goOfflineHome()" title="下载全部学习资源到本地，之后无需网络也能使用">📡 离线运行</button>
+        <button class="btn-offline-home" id="btnOfflineHome" title="下载全部学习资源到本地，之后无需网络也能使用">📡 离线运行</button>
         <span class="offline-hint" id="offlineHint"></span>
     </div>
 </div>
 
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/word-cards/sw.js').catch(function(){});
-}
-</script>
 <script src="animal-data.js"></script>
+<script src="common.js"></script>
 <script>
+registerSW();
 // ========== 动态填充动物数量 ==========
 (function() {
     var el = document.getElementById('animalCount');
@@ -200,68 +178,12 @@ if ('serviceWorker' in navigator) {
     }
 })();
 
-// ========== 首页离线运行按钮 ==========
-var offlineHomeActive = false;
-
-function goOfflineHome() {
-    if (offlineHomeActive) return;
-    var btn = document.getElementById('btnOfflineHome');
-    var hint = document.getElementById('offlineHint');
-
-    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-        hint.textContent = '请刷新页面后再试';
-        setTimeout(function() { hint.textContent = ''; }, 3000);
-        return;
-    }
-
-    // 资源清单：核心文件
-    var urls = [
-        '/word-cards/',
-        '/word-cards/index.html',
-        '/word-cards/animal-cards.html',
-        '/word-cards/animal-select.html',
-        '/word-cards/animal-data.js',
-        '/word-cards/image-interaction.js',
-        '/word-cards/manifest.json'
-    ];
-    // 从 animal-data.js 动态收集全部动物的图片和音频
-    for (var i = 0; i < animals.length; i++) {
-        var a = animals[i];
-        if (a.image) urls.push(a.image);
-        if (a.speech_zh) urls.push(a.speech_zh);
-        if (a.speech_en) urls.push(a.speech_en);
-        if (a.speech_fact) urls.push(a.speech_fact);
-        if (a.sound) urls.push(a.sound);
-    }
-
-    offlineHomeActive = true;
-    btn.textContent = '⏳ 0/' + urls.length;
-    btn.classList.add('loading');
-
-    var channel = new MessageChannel();
-    channel.port1.onmessage = function(e) {
-        var data = e.data;
-        if (data.complete) {
-            offlineHomeActive = false;
-            btn.classList.remove('loading');
-            btn.textContent = '✅ 已离线 (' + (data.total - data.failed) + '/' + data.total + ')';
-            btn.classList.add('done');
-            hint.textContent = '可以断网使用了！';
-            setTimeout(function() {
-                btn.textContent = '📡 离线运行';
-                btn.classList.remove('done');
-                hint.textContent = '';
-            }, 5000);
-        } else {
-            btn.textContent = '⏳ ' + data.done + '/' + data.total;
-        }
-    };
-
-    navigator.serviceWorker.controller.postMessage(
-        { type: 'DOWNLOAD_ALL', urls: urls },
-        [channel.port2]
-    );
-}
+// ========== 首页离线运行按钮（使用 common.js 通用逻辑） ==========
+initOfflineButton(document.getElementById('btnOfflineHome'), {
+    defaultText: '📡 离线运行',
+    doneDuration: 5000,
+    hintEl: document.getElementById('offlineHint')
+});
 </script>
 
 </body>
