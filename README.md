@@ -19,7 +19,7 @@
 
 - 双语学习：中文名 + 英文名 + 科普描述，点击朗读
 - 实拍照片：WebP 响应式图片（400w/800w/原图三档），缩放/拖拽/双指缩放/边缘色背景
-- 滑动窗口预加载：当前 + 前1 + 后3，翻页零等待
+- 滑动窗口预加载：当前 + 前1张(已看过) + 后3张，翻页零等待
 - 左右滑动翻页：全卡片区域手势，zoom 模式自动禁用
 - 离线运行：一键下载全部资源到本地，断网可用
 - PWA 支持：可添加到主屏幕
@@ -37,7 +37,8 @@ word-cards/
 ├── animal-select.html      # 浏览模式
 ├── animal-data.js          # 动物数据（唯一数据源，动态驱动）
 ├── image-interaction.js    # 图片缩放/拖拽交互模块
-├── common.css / common.js  # 公共样式与逻辑
+├── common.css              # 公共样式
+├── common.js               # 公共逻辑
 ├── sw.js                   # Service Worker（版本时间戳自动生成）
 ├── build.sh                # 构建脚本（自动替换 SW 版本）
 ├── manifest.json           # PWA 配置
@@ -97,8 +98,4 @@ python3 -m http.server 8080
 
 **待开发**：水果 / 交通工具 / 颜色形状 / 数字 / 身体部位 / 动物叫声 / 学习统计 / 朗读视觉反馈
 
-**已完成**：
-- [x] Service Worker 离线缓存 + 时间戳自动版本
-- [x] 图片 JPG → WebP（14MB → 5.8MB）+ 响应式 srcset
-- [x] 公共 CSS / JS 模块 + 滑动翻页 + 图片失败兜底
-- [x] 事件泄漏修复 / Edge Color 异步化 / 音频对象复用 / 硬编码消除
+**已完成**：详见 [dev-log/README.md](dev-log/README.md)
