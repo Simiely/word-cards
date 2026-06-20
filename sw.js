@@ -2,11 +2,12 @@
 // Service Worker — 离线缓存 & 加载加速
 // 策略：
 //   核心文件（HTML/JS/CSS）: Network First，失败回退缓存
-//   静态资源（图片/音频）: Cache First
+//   静态资源（图片/音频）: Stale-While-Revalidate
 //   其他: Network First
+// 支持页面发送消息触发「一键离线」全量缓存
 // ============================================================
 
-var CACHE_VERSION = 'v2';
+var CACHE_VERSION = 'v3';
 var CACHE_NAME = 'word-cards-' + CACHE_VERSION;
 
 // 核心文件列表（安装时预缓存）
@@ -25,7 +26,6 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(PRECACHE_URLS).catch(function(err) {
-        // 某个文件下载失败不阻塞安装
         console.warn('SW precache partial fail:', err);
       });
     }).then(function() {
@@ -51,26 +51,78 @@ self.addEventListener('activate', function(event) {
 // ---- 请求拦截 ----
 self.addEventListener('fetch', function(event) {
   var url = new URL(event.request.url);
-  var path = url.pathname;
 
   // 只处理同域请求
   if (url.origin !== self.location.origin) return;
 
-  // 策略1: 图片 & 音频 → Cache First（变体：Stale-While-Revalidate）
+  var path = url.pathname;
+
+  // 图片 & 音频 → Stale-While-Revalidate
   if (/\.(jpg|jpeg|png|webp|gif|svg|mp3|wav|ogg|m4a)(\?|$)/i.test(path)) {
     event.respondWith(staleWhileRevalidate(event.request));
     return;
   }
 
-  // 策略2: HTML / JS / CSS → Network First，失败回退缓存
+  // HTML / JS / CSS → Network First，失败回退缓存
   if (/\.(html|js|css|json)(\?|$)/i.test(path) || path === '/' || path.endsWith('/')) {
     event.respondWith(networkFirst(event.request));
     return;
   }
 
-  // 策略3: 其他 → Network First
+  // 其他 → Network First
   event.respondWith(networkFirst(event.request));
 });
+
+// ---- 消息处理：接收页面指令 ----
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'DOWNLOAD_ALL') {
+    var urls = event.data.urls;
+    downloadAll(urls, event.ports[0]);
+  }
+});
+
+// 全量下载指定 URL 列表到缓存，实时回报进度
+function downloadAll(urls, replyPort) {
+  var cachePromise = caches.open(CACHE_NAME);
+  var total = urls.length;
+  var done = 0;
+  var failed = 0;
+
+  var promises = urls.map(function(url) {
+    return cachePromise.then(function(cache) {
+      return cache.match(url).then(function(cached) {
+        if (cached) {
+          // 已有缓存，直接算完成
+          done++;
+          if (replyPort) {
+            replyPort.postMessage({ done: done, total: total, failed: failed, url: url, cached: true });
+          }
+          return;
+        }
+        // 没有缓存，下载
+        return fetch(url, { mode: 'no-cors' }).then(function(response) {
+          if (response.ok || response.type === 'opaque') {
+            return cache.put(url, response);
+          }
+          failed++;
+        }).catch(function() {
+          failed++;
+        }).then(function() {
+          done++;
+          if (replyPort) {
+            replyPort.postMessage({ done: done, total: total, failed: failed, url: url });
+          }
+        });
+      });
+    });
+  });
+
+  Promise.all(promises).then(function() {
+    if (replyPort) {
+      replyPort.postMessage({ done: total, total: total, failed: failed, complete: true });
+    }
+  });
+}
 
 // ---- Cache First 辅助 ----
 function cacheFirst(request) {
@@ -85,7 +137,7 @@ function cacheFirst(request) {
   });
 }
 
-// ---- Stale-While-Revalidate（立即返回缓存，后台更新） ----
+// ---- Stale-While-Revalidate ----
 function staleWhileRevalidate(request) {
   return caches.match(request).then(function(cached) {
     var fetchPromise = fetch(request).then(function(response) {
@@ -93,9 +145,7 @@ function staleWhileRevalidate(request) {
         cache.put(request, response.clone());
         return response;
       });
-    }).catch(function() {
-      // 网络失败，忽略（有缓存就用缓存）
-    });
+    }).catch(function() {});
     return cached || fetchPromise;
   });
 }

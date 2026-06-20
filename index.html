@@ -101,6 +101,26 @@
             text-align: center; padding: 24px 0 12px;
             font-size: 12px; color: #ccc; letter-spacing: 0.5px;
         }
+        .offline-bar {
+            text-align: center; padding: 8px 0 20px;
+        }
+        .btn-offline-home {
+            background: #e8f0fe; border: 2px solid #4285f4; color: #1a56c4;
+            font-size: 15px; padding: 12px 28px; border-radius: 50px;
+            cursor: pointer; font-weight: 600; letter-spacing: 0.5px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-offline-home:active { background: #4285f4; color: #fff; }
+        .btn-offline-home.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
+        .btn-offline-home.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        .offline-hint {
+            display: block; font-size: 12px; color: #888; margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -158,11 +178,82 @@
     </div>
 
     <div class="footer">Made with ❤️ for kids</div>
+
+    <div class="offline-bar">
+        <button class="btn-offline-home" id="btnOfflineHome" onclick="goOfflineHome()" title="下载全部学习资源到本地，之后无需网络也能使用">📡 离线运行</button>
+        <span class="offline-hint" id="offlineHint"></span>
+    </div>
 </div>
 
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/word-cards/sw.js').catch(function(){});
+}
+</script>
+<script>
+// ========== 首页离线运行按钮 ==========
+var offlineHomeActive = false;
+
+function goOfflineHome() {
+    if (offlineHomeActive) return;
+    var btn = document.getElementById('btnOfflineHome');
+    var hint = document.getElementById('offlineHint');
+
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+        hint.textContent = '请刷新页面后再试';
+        setTimeout(function() { hint.textContent = ''; }, 3000);
+        return;
+    }
+
+    // 资源清单（与 animal-cards.html 的离线按钮一致）
+    var urls = [
+        '/word-cards/',
+        '/word-cards/index.html',
+        '/word-cards/animal-cards.html',
+        '/word-cards/animal-select.html',
+        '/word-cards/animal-data.js',
+        '/word-cards/image-interaction.js',
+        '/word-cards/manifest.json'
+    ];
+    // 图片
+    var imgs = ['butterfly','cat','chicken','cow','dog','dolphin','duck','elephant','fish','frog','giraffe','horse','lion','monkey','panda','penguin','rabbit','shark','sheep','tiger','zebra'];
+    for (var i = 0; i < imgs.length; i++) {
+        urls.push('animal/images/' + imgs[i] + '.jpg');
+    }
+    // 音频
+    for (var i = 0; i < imgs.length; i++) {
+        urls.push('animal/speech_zh/' + imgs[i] + '.mp3');
+        urls.push('animal/speech_en/' + imgs[i] + '.mp3');
+        urls.push('animal/speech_fact/' + imgs[i] + '.mp3');
+    }
+
+    offlineHomeActive = true;
+    btn.textContent = '⏳ 0/' + urls.length;
+    btn.classList.add('loading');
+
+    var channel = new MessageChannel();
+    channel.port1.onmessage = function(e) {
+        var data = e.data;
+        if (data.complete) {
+            offlineHomeActive = false;
+            btn.classList.remove('loading');
+            btn.textContent = '✅ 已离线 (' + (data.total - data.failed) + '/' + data.total + ')';
+            btn.classList.add('done');
+            hint.textContent = '可以断网使用了！';
+            setTimeout(function() {
+                btn.textContent = '📡 离线运行';
+                btn.classList.remove('done');
+                hint.textContent = '';
+            }, 5000);
+        } else {
+            btn.textContent = '⏳ ' + data.done + '/' + data.total;
+        }
+    };
+
+    navigator.serviceWorker.controller.postMessage(
+        { type: 'DOWNLOAD_ALL', urls: urls },
+        [channel.port2]
+    );
 }
 </script>
 

@@ -70,6 +70,18 @@
             font-weight: 600; transition: all 0.2s;
         }
         .top-bar .btn-home:active { border-color: var(--primary); color: var(--primary); }
+        .top-bar .btn-offline-select {
+            background: #e8f0fe; border: 2px solid #4285f4; color: #1a56c4;
+            font-size: 14px; padding: 8px 18px; border-radius: 20px;
+            cursor: pointer; font-weight: 600; transition: all 0.2s;
+        }
+        .top-bar .btn-offline-select:active { background: #4285f4; color: #fff; }
+        .top-bar .btn-offline-select.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
+        .top-bar .btn-offline-select.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
 
         /* 瀑布流网格 */
         .grid {
@@ -228,6 +240,7 @@
         <a class="btn-home" href="index.html">📚 首页</a>
         <button class="btn-refresh" id="btnRefresh" title="清除浏览记录">再来一次</button>
         <a class="btn-back" href="animal-cards.html">卡片模式</a>
+        <button class="btn-offline-select" id="btnOfflineSelect" onclick="goOfflineSelect()" title="下载全部资源到本地">📡 离线</button>
     </div>
 </div>
 
@@ -534,6 +547,68 @@ buildGrid(gridEl, function(idx) {
     showCard(idx);
 });
 updateVisitedClass();
+
+// ========== 离线运行按钮 ==========
+var offlineSelectActive = false;
+
+function goOfflineSelect() {
+    if (offlineSelectActive) return;
+    var btn = document.getElementById('btnOfflineSelect');
+
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+        btn.textContent = '⚠️ 请刷新';
+        btn.classList.add('done');
+        setTimeout(function() {
+            btn.textContent = '📡 离线';
+            btn.classList.remove('done');
+        }, 3000);
+        return;
+    }
+
+    var urls = [
+        '/word-cards/',
+        '/word-cards/index.html',
+        '/word-cards/animal-cards.html',
+        '/word-cards/animal-select.html',
+        '/word-cards/animal-data.js',
+        '/word-cards/image-interaction.js',
+        '/word-cards/manifest.json'
+    ];
+    for (var i = 0; i < animals.length; i++) {
+        var a = animals[i];
+        if (a.image) urls.push(a.image);
+        if (a.speech_zh) urls.push(a.speech_zh);
+        if (a.speech_en) urls.push(a.speech_en);
+        if (a.speech_fact) urls.push(a.speech_fact);
+        if (a.sound) urls.push(a.sound);
+    }
+
+    offlineSelectActive = true;
+    btn.textContent = '⏳ 0/' + urls.length;
+    btn.classList.add('loading');
+
+    var channel = new MessageChannel();
+    channel.port1.onmessage = function(e) {
+        var data = e.data;
+        if (data.complete) {
+            offlineSelectActive = false;
+            btn.classList.remove('loading');
+            btn.textContent = '✅ ' + (data.total - data.failed) + '/' + data.total;
+            btn.classList.add('done');
+            setTimeout(function() {
+                btn.textContent = '📡 离线';
+                btn.classList.remove('done');
+            }, 4000);
+        } else {
+            btn.textContent = '⏳ ' + data.done + '/' + data.total;
+        }
+    };
+
+    navigator.serviceWorker.controller.postMessage(
+        { type: 'DOWNLOAD_ALL', urls: urls },
+        [channel.port2]
+    );
+}
 </script>
 </body>
 </html>

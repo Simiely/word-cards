@@ -187,13 +187,13 @@
         .nav button:active { border-color: var(--primary); color: var(--primary); transform: scale(0.95); }
         .nav .btn-random { border-color: var(--accent); color: var(--accent); }
         .nav .btn-random:active { background: var(--accent); color: #fff; }
-        .nav .btn-warmup {
-            background: #fffbe6; border-color: #f0c040; color: #b8860b;
+        .nav .btn-offline {
+            background: #e8f0fe; border-color: #4285f4; color: #1a56c4;
             font-size: 13px; padding: 8px 16px;
         }
-        .nav .btn-warmup:active { background: #f0c040; color: #fff; }
-        .nav .btn-warmup.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
-        .nav .btn-warmup.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
+        .nav .btn-offline:active { background: #4285f4; color: #fff; }
+        .nav .btn-offline.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
+        .nav .btn-offline.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 0.7; }
             50% { opacity: 1; }
@@ -272,7 +272,7 @@
         <button onclick="goTo(currentIndex - 1)">← 上一个</button>
         <button class="btn-random" onclick="goRandom()">🎲 随机</button>
         <button onclick="goTo(currentIndex + 1)">下一个 →</button>
-        <button class="btn-warmup" id="btnWarmup" onclick="warmupCache()" title="预加载后续10张卡片，翻页更流畅">⚡ 预热</button>
+        <button class="btn-offline" id="btnOffline" onclick="goOffline()" title="下载全部资源到本地，之后无需网络也能使用">📡 离线运行</button>
     </div>
 </div>
 
@@ -593,93 +593,72 @@ function goRandom() {
     goTo(0);
 }
 
-// ========== 一键预热：缓存全部未加载的卡片 ==========
-var warmupActive = false;
+// ========== 一键离线：通过 Service Worker 全量缓存所有资源 ==========
+var offlineActive = false;
 
-function warmupCache() {
-    if (warmupActive) return;
-    var btn = document.getElementById('btnWarmup');
-    var total = displayOrder.length;
+function goOffline() {
+    if (offlineActive) return;
+    var btn = document.getElementById('btnOffline');
 
-    // 收集所有未缓存图片的原始动物索引（按 data 数组，而非 displayOrder）
-    var targets = [];
-    var seen = {};
-    for (var i = 0; i < animals.length; i++) {
-        var a = animals[i];
-        if (a.image && !preloaded[a.image] && !seen[a.image]) {
-            seen[a.image] = true;
-            targets.push(i);
-        }
-    }
-
-    if (targets.length === 0) {
-        btn.textContent = '✅ 已就绪';
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+        btn.textContent = '⚠️ SW未就绪';
         btn.classList.add('done');
         setTimeout(function() {
-            btn.textContent = '⚡ 预热';
+            btn.textContent = '📡 离线运行';
             btn.classList.remove('done');
-        }, 2000);
+        }, 3000);
         return;
     }
 
-    warmupActive = true;
-    btn.textContent = '⏳ ' + targets.length + '张...';
+    // 收集全部资源 URL
+    var urls = [];
+    // 核心文件
+    var base = '/word-cards';
+    urls.push(base + '/');
+    urls.push(base + '/index.html');
+    urls.push(base + '/animal-cards.html');
+    urls.push(base + '/animal-select.html');
+    urls.push(base + '/animal-data.js');
+    urls.push(base + '/image-interaction.js');
+    urls.push(base + '/manifest.json');
+    // 全部21只动物的图片和音频
+    for (var i = 0; i < animals.length; i++) {
+        var a = animals[i];
+        if (a.image) urls.push(a.image);
+        if (a.speech_zh) urls.push(a.speech_zh);
+        if (a.speech_en) urls.push(a.speech_en);
+        if (a.speech_fact) urls.push(a.speech_fact);
+        if (a.sound) urls.push(a.sound);
+    }
+
+    offlineActive = true;
+    btn.textContent = '⏳ 0/' + urls.length;
     btn.classList.add('loading');
 
-    // 直接预热原始数据索引，与 displayOrder 无关
-    preloadRawBatch(targets).then(function() {
-        warmupActive = false;
-        btn.classList.remove('loading');
-        btn.textContent = '✅ 已就绪';
-        btn.classList.add('done');
-        setTimeout(function() {
-            btn.textContent = '⚡ 预热';
-            btn.classList.remove('done');
-        }, 2000);
-    });
-}
+    // 通过 MessageChannel 与 SW 通信，实时获取进度
+    var channel = new MessageChannel();
+    channel.port1.onmessage = function(e) {
+        var data = e.data;
+        if (data.complete) {
+            // 全部完成
+            offlineActive = false;
+            btn.classList.remove('loading');
+            btn.textContent = '✅ 已离线 (' + (data.total - data.failed) + '/' + data.total + ')';
+            btn.classList.add('done');
+            setTimeout(function() {
+                btn.textContent = '📡 离线运行';
+                btn.classList.remove('done');
+            }, 4000);
+        } else {
+            // 进度更新
+            btn.textContent = '⏳ ' + data.done + '/' + data.total;
+        }
+    };
 
-// 预热原始数据索引（不依赖 displayOrder）
-function preloadRawBatch(indices) {
-    var promises = [];
-    for (var i = 0; i < indices.length; i++) {
-        (function(rawIdx) {
-            var a = animals[rawIdx];
-            if (!a.image || preloaded[a.image]) return;
-            preloaded[a.image] = true;
-            promises.push(
-                new Promise(function(resolve) {
-                    var img = new Image();
-                    var done = false;
-                    function finish() {
-                        if (done) return;
-                        done = true;
-                        // 后台加载音频
-                        var srcs = [];
-                        if (a.speech_zh) srcs.push(a.speech_zh);
-                        if (a.speech_en) srcs.push(a.speech_en);
-                        if (a.speech_fact) srcs.push(a.speech_fact);
-                        for (var j = 0; j < srcs.length; j++) {
-                            if (!preloaded[srcs[j]]) {
-                                preloaded[srcs[j]] = true;
-                                var audio = new Audio();
-                                audio.preload = 'auto';
-                                audio.src = srcs[j];
-                            }
-                        }
-                        resolve();
-                    }
-                    img.onload = finish;
-                    img.onerror = finish;
-                    img.src = a.image;
-                    if (img.complete) finish();
-                    setTimeout(finish, 5000);
-                })
-            );
-        })(indices[i]);
-    }
-    if (promises.length === 0) return Promise.resolve();
-    return Promise.all(promises);
+    navigator.serviceWorker.controller.postMessage(
+        { type: 'DOWNLOAD_ALL', urls: urls },
+        [channel.port2]
+    );
 }
 
 document.addEventListener('keydown', function(e) {
