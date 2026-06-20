@@ -493,15 +493,6 @@ function showCard(index) {
             zoomBtn: popZoomBtn
         });
 
-        btnClose2.addEventListener('click', function(e) {
-            e.stopPropagation();
-            closeCard();
-        });
-
-        // 点击 overlay 空白区域关闭
-        cardOverlay.addEventListener('click', function(e) {
-            if (e.target === cardOverlay) closeCard();
-        });
         cardOverlay.classList.add('active');
         markVisited(index);
         updateVisitedClass();
@@ -517,9 +508,21 @@ function closeCard() {
     updateVisitedClass();
 }
 
+// 卡片弹出层事件：只注册一次（避免每次 showCard 重复添加监听器）
 btnClose.addEventListener('click', function(e) {
     e.stopPropagation();
     closeCard();
+});
+// 点击 overlay 空白区域关闭
+cardOverlay.addEventListener('click', function(e) {
+    if (e.target === cardOverlay) closeCard();
+});
+// 动态关闭按钮（btnClose2 每次渲染都会重建，用事件代理）
+popCardImage.addEventListener('click', function(e) {
+    if (e.target.closest && e.target.closest('.btn-close')) {
+        e.stopPropagation();
+        closeCard();
+    }
 });
 
 // 点击卡片文字/emoji发音

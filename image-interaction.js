@@ -288,28 +288,39 @@ function initImageInteraction(config) {
 
     function extractEdgeColor(imgEl) {
         if (!imgEl || !imgEl.naturalWidth) return;
-        try {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            var iw = imgEl.naturalWidth, ih = imgEl.naturalHeight;
-            canvas.width = iw; canvas.height = ih;
-            ctx.drawImage(imgEl, 0, 0, iw, ih);
-            var top = ctx.getImageData(0, 0, iw, 1).data;
-            var bottom = ctx.getImageData(0, ih-1, iw, 1).data;
-            var left = ctx.getImageData(0, 0, 1, ih).data;
-            var right = ctx.getImageData(iw-1, 0, 1, ih).data;
-            var r = 0, g = 0, b = 0, count = 0;
-            function add(data) {
-                for (var i = 0; i < data.length; i += 4) {
-                    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+        // 延迟到空闲时执行，避免阻塞图片切换渲染
+        var doExtract = function() {
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var iw = imgEl.naturalWidth, ih = imgEl.naturalHeight;
+                // 缩小采样尺寸，减少计算量（原图可能近1000px，200px足够取边缘色）
+                var scale = Math.min(1, 200 / Math.max(iw, ih));
+                canvas.width = Math.max(1, Math.round(iw * scale));
+                canvas.height = Math.max(1, Math.round(ih * scale));
+                ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+                var top = ctx.getImageData(0, 0, canvas.width, 1).data;
+                var bottom = ctx.getImageData(0, canvas.height - 1, canvas.width, 1).data;
+                var left = ctx.getImageData(0, 0, 1, canvas.height).data;
+                var right = ctx.getImageData(canvas.width - 1, 0, 1, canvas.height).data;
+                var r = 0, g = 0, b = 0, count = 0;
+                function add(data) {
+                    for (var i = 0; i < data.length; i += 4) {
+                        r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                    }
                 }
-            }
-            add(top); add(bottom); add(left); add(right);
-            r = Math.round(r / count);
-            g = Math.round(g / count);
-            b = Math.round(b / count);
-            container.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
-        } catch(e) {}
+                add(top); add(bottom); add(left); add(right);
+                r = Math.round(r / count);
+                g = Math.round(g / count);
+                b = Math.round(b / count);
+                container.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+            } catch(e) {}
+        };
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(doExtract, { timeout: 1000 });
+        } else {
+            setTimeout(doExtract, 50);
+        }
     }
 
     // 图片加载后自动提取边缘色
