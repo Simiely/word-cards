@@ -187,6 +187,17 @@
         .nav button:active { border-color: var(--primary); color: var(--primary); transform: scale(0.95); }
         .nav .btn-random { border-color: var(--accent); color: var(--accent); }
         .nav .btn-random:active { background: var(--accent); color: #fff; }
+        .nav .btn-warmup {
+            background: #fffbe6; border-color: #f0c040; color: #b8860b;
+            font-size: 13px; padding: 8px 16px;
+        }
+        .nav .btn-warmup:active { background: #f0c040; color: #fff; }
+        .nav .btn-warmup.done { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }
+        .nav .btn-warmup.loading { opacity: 0.7; pointer-events: none; animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
 
         @media (min-width: 640px) {
             .card-body { min-height: 130px; }
@@ -261,6 +272,7 @@
         <button onclick="goTo(currentIndex - 1)">← 上一个</button>
         <button class="btn-random" onclick="goRandom()">🎲 随机</button>
         <button onclick="goTo(currentIndex + 1)">下一个 →</button>
+        <button class="btn-warmup" id="btnWarmup" onclick="warmupCache()" title="预加载后续10张卡片，翻页更流畅">⚡ 预热</button>
     </div>
 </div>
 
@@ -579,6 +591,52 @@ function goRandom() {
     preloaded = {};
     preloadingSet = {};
     goTo(0);
+}
+
+// ========== 一键预热：缓存后续10张卡片 ==========
+var warmupActive = false;
+var warmupCount = 10;
+
+function warmupCache() {
+    if (warmupActive) return;
+    var btn = document.getElementById('btnWarmup');
+    var total = displayOrder.length;
+
+    // 收集后续未缓存的卡片索引（最多10个）
+    var targets = [];
+    for (var i = currentIndex + 1; i < total; i++) {
+        var a = animals[displayOrder[i]];
+        if (a.image && !preloaded[a.image]) {
+            targets.push(i);
+            if (targets.length >= warmupCount) break;
+        }
+    }
+
+    if (targets.length === 0) {
+        // 全部已缓存
+        btn.textContent = '✅ 已就绪';
+        btn.classList.add('done');
+        setTimeout(function() {
+            btn.textContent = '⚡ 预热';
+            btn.classList.remove('done');
+        }, 2000);
+        return;
+    }
+
+    warmupActive = true;
+    btn.textContent = '⏳ ' + targets.length + '张...';
+    btn.classList.add('loading');
+
+    preloadBatch(targets).then(function() {
+        warmupActive = false;
+        btn.classList.remove('loading');
+        btn.textContent = '✅ 已就绪';
+        btn.classList.add('done');
+        setTimeout(function() {
+            btn.textContent = '⚡ 预热';
+            btn.classList.remove('done');
+        }, 2000);
+    });
 }
 
 document.addEventListener('keydown', function(e) {
