@@ -3,6 +3,13 @@
 // 图片: animal/images/{英文名}.webp
 // 语音: animal/speech_zh/、speech_en/、speech_fact/ (Edge TTS)
 // 叫声: animal/sounds_normalized/{英文名}.mp3 (待添加)
+//
+// ⚠️ 新增动物规范：
+//   1. fact 描述必须基于可靠科学事实，禁止使用未经证实的传说或伪科学
+//   2. 参考来源：维基百科、学术期刊、权威科普机构（如国家地理、BBC Earth）
+//   3. 避免夸大表述（如"最""唯一"等词需有数据支撑）
+//   4. 描述应简洁准确，适合儿童理解，但不歪曲事实
+//   5. 新增后需同步生成 speech_fact 语音文件
 // ============================================================
 
 const animals = [
@@ -27,7 +34,7 @@ const animals = [
     { zh:'兔子', en:'Rabbit', emoji:'🐰', sound:'', speech_zh:'animal/speech_zh/rabbit.mp3', speech_en:'animal/speech_en/rabbit.mp3', speech_fact:'animal/speech_fact/rabbit.mp3', image:'animal/images/rabbit.webp', image_400:'animal/images/rabbit_400.webp', image_800:'animal/images/rabbit_800.webp',
       fact:'兔子的耳朵可以转动270度，帮助它们听到远处的危险。它们高兴时会跳起来在空中转身，这叫binky。' },
     { zh:'猫', en:'Cat', emoji:'🐱', sound:'', speech_zh:'animal/speech_zh/cat.mp3', speech_en:'animal/speech_en/cat.mp3', speech_fact:'animal/speech_fact/cat.mp3', image:'animal/images/cat.webp', image_400:'animal/images/cat_400.webp', image_800:'animal/images/cat_800.webp',
-      fact:'猫是世界上最受欢迎的宠物之一。它们呼噜呼噜的声音不仅能表示开心，还能帮助骨骼愈合。' },
+      fact:'猫是世界上最受欢迎的宠物之一。它们的胡须能感知空气的细微变化，帮助它们在黑暗中判断方向。' },
     { zh:'狗', en:'Dog', emoji:'🐶', sound:'', speech_zh:'animal/speech_zh/dog.mp3', speech_en:'animal/speech_en/dog.mp3', speech_fact:'animal/speech_fact/dog.mp3', image:'animal/images/dog.webp', image_400:'animal/images/dog_400.webp', image_800:'animal/images/dog_800.webp',
       fact:'狗是人类最早驯化的动物，它们的嗅觉比人类灵敏1万到10万倍，能嗅出疾病和情绪变化。' },
     { zh:'马', en:'Horse', emoji:'🐴', sound:'', speech_zh:'animal/speech_zh/horse.mp3', speech_en:'animal/speech_en/horse.mp3', speech_fact:'animal/speech_fact/horse.mp3', image:'animal/images/horse.webp', image_400:'animal/images/horse_400.webp', image_800:'animal/images/horse_800.webp',
