@@ -52,9 +52,11 @@
   - 已浏览动物 10% 透明度标记
   - 「再来一次」清除浏览记录
 - **滑动窗口预加载**：当前卡片 + 后方 3 张 + 前方 1 张，翻页零等待
+- **左右滑动翻页**：在卡片文字区域左右滑动切换上/下一张（zoom 模式下自动禁用）
 - **加载动画**：呼吸缩放 emoji，加载完成后自动淡出
-- **循环导航**：上一个 / 下一个 / 重新洗牌，键盘快捷键
+- **循环导航**：上一个 / 下一个 / 重新洗牌，键盘快捷键 + 手势滑动
 - **高分辨率适配**：自适应 3:4 竖版高分辨率平板
+- **响应式图片**：400w / 800w / 原图三档 srcset，按屏幕宽度自动选择，移动端省 90% 流量
 - **PWA 支持**：可添加到主屏幕
 - **离线运行**：点击「📡 离线运行」按钮，一键下载全部资源到本地，断网也能用
 
@@ -69,13 +71,15 @@ word-cards/
 ├── animal-select.html      ← 动物浏览模式
 ├── animal-data.js          ← 共享数据源（动物数据，动态驱动）
 ├── image-interaction.js    ← 公共图片交互模块（缩放/拖拽/双指缩放/边缘色）
+├── common.css              ← 公共样式表（三页面共享）
+├── common.js               ← 公共 JS 模块（SW注册/音频播放/离线按钮）
 ├── sw.js                   ← Service Worker（离线缓存 + 加速）
 ├── manifest.json           ← PWA 配置
 ├── README.md
 ├── dev-log/                ← 开发日志
 │   └── README.md
 └── animal/
-    ├── images/             ← 动物实拍照片（{英文名}.webp，WebP 格式）
+    ├── images/             ← 动物实拍照片（WebP，含原图 + 400w + 800w 多尺寸）
     ├── speech_zh/          ← 中文名称语音（Edge TTS MP3）
     ├── speech_en/          ← 英文名称语音（Edge TTS MP3）
     ├── speech_fact/        ← 科普描述语音（Edge TTS MP3）
@@ -89,8 +93,9 @@ word-cards/
 | 技术 | 用途 |
 |------|------|
 | HTML/CSS/JS（无框架） | 纯静态页面，零依赖 |
-| WebP | 图片格式，比 JPG 节省 57% 体积 |
+| WebP + srcset | 响应式图片，多尺寸按屏幕自动选择，移动端省 90% 流量 |
 | Service Worker | 离线缓存 + 加载加速（三级缓存策略） |
+| common.css / common.js | 公共样式与逻辑模块，消除三页面重复代码 |
 | Edge TTS | 预录制 MP3 语音，全平台兼容（含 iOS Safari） |
 | Canvas API | 图片边缘色提取、emoji 平均色提取 |
 | Pointer Events + setPointerCapture | 跨设备拖拽和缩放 |
@@ -161,7 +166,7 @@ python3 -m http.server 8080
 ## 模块说明
 
 ### `animal-data.js`
-共享的动物数据源，包含动物的中英文名称、emoji、图片路径（WebP）、语音路径和科普描述。两个模式页面和首页通过 `<script src>` 引用。**新增动物只需在此文件追加一条数据**，所有页面自动适配，无需修改其他文件。
+共享的动物数据源，包含动物的中英文名称、emoji、图片路径（WebP 多尺寸）、语音路径和科普描述。两个模式页面和首页通过 `<script src>` 引用。**新增动物只需在此文件追加一条数据**，所有页面自动适配，无需修改其他文件。
 
 ### `image-interaction.js`
 公共图片交互模块，提供 `initImageInteraction(config)` 函数。封装了缩放切换、鼠标/触摸拖拽、双指缩放、滚轮缩放、边缘色提取等功能。边缘色提取使用 `requestIdleCallback` 异步执行，不阻塞渲染。返回 `cleanup()` 函数用于解绑事件。
@@ -174,6 +179,20 @@ var cleanup = initImageInteraction({
 });
 // 切换图片时调用 cleanup() 清理旧事件
 ```
+
+### `common.css`
+三页面共享的公共样式表。提取了 `:root` CSS 变量、全局 reset、body 基础样式、`@keyframes pulse` 动画、`.card-image` / `.zoom-toggle` / `.card-body` 系列公共样式，以及离线按钮状态样式。各页面仅保留独有的布局和组件样式。
+
+### `common.js`
+三页面共享的公共 JS 模块。提供以下通用函数：
+
+| 函数 | 说明 |
+|------|------|
+| `registerSW()` | Service Worker 注册 |
+| `speak(lang, animal)` | 语音朗读（复用单例 Audio） |
+| `playAnimalSound(animal)` | 动物叫声播放（复用单例 Audio） |
+| `collectOfflineUrls()` | 收集全部资源 URL（核心文件 + 动物图片音频） |
+| `initOfflineButton(btn, opts)` | 离线运行按钮通用逻辑（进度回报 + 状态切换） |
 
 ### `sw.js`
 Service Worker 模块，实现离线缓存与加载加速。
@@ -206,6 +225,9 @@ Service Worker 模块，实现离线缓存与加载加速。
 - [ ] 补齐动物叫声 MP3
 - [x] ~~Service Worker 离线缓存~~ ✅ 已完成（`sw.js`）
 - [x] ~~图片转 WebP 优化~~ ✅ 已完成（14MB → 5.8MB）
+- [x] ~~公共 CSS / JS 模块提取~~ ✅ 已完成（`common.css` + `common.js`）
+- [x] ~~响应式图片 srcset~~ ✅ 已完成（400w / 800w / 原图三档）
+- [x] ~~左右滑动翻页~~ ✅ 已完成（文字区域滑动手势）
 - [ ] 学习进度统计
 - [ ] 语音朗读视觉反馈
 - [ ] PWA 正式 PNG 图标
