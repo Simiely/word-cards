@@ -396,10 +396,7 @@ function showCard(index) {
         popCardImage.className = 'card-image';
         popCardImage.style.backgroundColor = '';
         var srcset = '';
-        if (a.image_400 && a.image_800) {
-            srcset = ' srcset="' + a.image_400 + ' 400w, ' + a.image_800 + ' 800w, ' + a.image + ' 1600w" sizes="(max-width: 600px) 100vw, 50vw"';
-        }
-        popCardImage.innerHTML = '<img src="' + a.image + '"' + srcset + ' alt="' + a.zh + '" id="popImg"><button class="zoom-toggle" id="popZoomBtn" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button><button class="btn-close" id="btnClose2">✕</button>';
+        popCardImage.innerHTML = '<img src="' + a.image + '" alt="' + a.zh + '" id="popImg"><button class="zoom-toggle" id="popZoomBtn" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button><button class="btn-close" id="btnClose2">✕</button>';
         var popImg = document.getElementById('popImg');
         var popZoomBtn = document.getElementById('popZoomBtn');
         var btnClose2 = document.getElementById('btnClose2');
@@ -487,3 +484,4 @@ initOfflineButton(document.getElementById('btnOfflineSelect'), { defaultText: '�
 </script>
 </body>
 </html>
+
