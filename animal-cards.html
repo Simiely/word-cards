@@ -130,6 +130,23 @@
         }
         .nav .btn-offline:active { background: #4285f4; color: #fff; }
 
+        /* 图片加载失败占位 */
+        .img-fallback {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+        }
+        .fallback-emoji {
+            font-size: clamp(60px, 14vw, 100px); line-height: 1; margin-bottom: 16px;
+        }
+        .fallback-retry {
+            background: var(--card-bg); border: 2px solid var(--primary); color: var(--primary);
+            font-size: 14px; padding: 8px 20px; border-radius: 50px;
+            cursor: pointer; font-weight: 600; transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .fallback-retry:active { background: var(--primary); color: #fff; }
+
         @media (min-width: 640px) {
             .card-body { min-height: 130px; }
         }
@@ -417,7 +434,14 @@ function renderImage() {
 
     // 图片加载完成后淡入
     cardImgEl.onload = function() { cardImgEl.style.opacity = '1'; };
-    cardImgEl.onerror = function() { cardImgEl.style.opacity = '1'; };
+    cardImgEl.onerror = function() {
+        // 显示 emoji 占位 + 重试按钮
+        cardImage.innerHTML = '<div class="img-fallback"><div class="fallback-emoji">' + (animal.emoji || '📷') + '</div><button class="fallback-retry" id="fallbackRetry">🔄 重新加载</button></div>';
+        document.getElementById('fallbackRetry').addEventListener('click', function(e) {
+            e.stopPropagation();
+            renderImage();
+        });
+    };
     if (cardImgEl.complete) cardImgEl.style.opacity = '1';
 
     // 初始化图片交互模块
@@ -497,40 +521,23 @@ function goRandom() {
 }
 
 // ========== 左右滑动翻页 ==========
-// 在 .card-body 和 .nav 上监听触摸滑动，避开 .card-image（图片拖拽区）
+// 在整个 .card 容器上监听触摸滑动（含图片区，zoom mode 下自动禁用）
 var touchStartX = 0, touchStartY = 0, touchTracking = false;
 
-document.querySelector('.card-body').addEventListener('touchstart', function(e) {
+document.getElementById('card').addEventListener('touchstart', function(e) {
     if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchTracking = true;
-}, { passive: true });
-
-document.querySelector('.card-body').addEventListener('touchend', function(e) {
-    if (!touchTracking) return;
-    touchTracking = false;
-    handleSwipe(e.changedTouches[0]);
-}, { passive: true });
-
-document.querySelector('.nav').addEventListener('touchstart', function(e) {
-    if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchTracking = true;
-}, { passive: true });
-
-document.querySelector('.nav').addEventListener('touchend', function(e) {
-    if (!touchTracking) return;
-    touchTracking = false;
-    handleSwipe(e.changedTouches[0]);
-}, { passive: true });
-
-function handleSwipe(touch) {
-    // zoom mode 下禁用滑动翻页
+    // zoom mode 下不跟踪滑动
     if (cardImage.classList.contains('zoom-mode')) return;
-    var dx = touch.clientX - touchStartX;
-    var dy = touch.clientY - touchStartY;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchTracking = true;
+}, { passive: true });
+
+document.getElementById('card').addEventListener('touchend', function(e) {
+    if (!touchTracking) return;
+    touchTracking = false;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
     // 水平滑动距离 > 50px 且 垂直 < 水平的 50%
     if (Math.abs(dx) > 50 && Math.abs(dy) < Math.abs(dx) * 0.5) {
         if (dx < 0) {
@@ -539,7 +546,7 @@ function handleSwipe(touch) {
             goTo(currentIndex - 1);  // 右滑 → 上一个
         }
     }
-}
+}, { passive: true });
 
 // ========== 离线运行按钮（使用 common.js 通用逻辑） ==========
 initOfflineButton(document.getElementById('btnOffline'), { defaultText: '📡 离线运行' });
