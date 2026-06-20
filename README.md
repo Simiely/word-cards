@@ -18,7 +18,7 @@
 ### 核心功能
 
 - 双语学习：中文名 + 英文名 + 科普描述，点击朗读
-- 实拍照片：WebP 响应式图片（400w/800w/原图三档），缩放/拖拽/双指缩放/边缘色背景
+- 实拍照片：高清 JPEG 原图，缩放/拖拽/双指缩放/边缘色背景
 - 滑动窗口预加载：当前 + 前1张(已看过) + 后3张，翻页零等待
 - 左右滑动翻页：全卡片区域手势，zoom 模式自动禁用
 - 离线运行：一键下载全部资源到本地，断网可用
@@ -44,7 +44,7 @@ word-cards/
 ├── manifest.json           # PWA 配置
 ├── dev-log/README.md       # 开发日志
 └── animal/
-    ├── images/             # WebP 图片（原图 + 400w + 800w）
+    ├── images/             # 动物照片（JPEG 原图）
     ├── speech_zh/en/fact/  # Edge TTS 语音
     └── sounds_normalized/  # 动物叫声（待添加）
 ```
@@ -56,7 +56,7 @@ word-cards/
 | 技术 | 用途 |
 |------|------|
 | HTML/CSS/JS（零依赖） | 纯静态页面 |
-| WebP + srcset | 响应式图片，移动端省 90% 流量 |
+| JPEG 原图 | 高清晰度实拍照片 |
 | Service Worker（时间戳版本） | 离线缓存，三级策略，`build.sh` 自动生成版本号 |
 | Canvas API | 边缘色提取（异步，不阻塞渲染） |
 | Pointer Events | 跨设备拖拽缩放 |
@@ -88,7 +88,7 @@ python3 -m http.server 8080
 ## 新增类别
 
 1. 创建 `{category}-data.js`（参考 `animal-data.js`）
-2. 准备素材：图片（WebP 多尺寸）+ 语音 MP3
+2. 准备素材：图片（JPEG 原图）+ 语音 MP3
 3. 复制 `animal-cards.html`，修改数据源引用
 4. 在 `index.html` 激活类别卡片
 
