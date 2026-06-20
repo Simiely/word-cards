@@ -38,7 +38,8 @@ word-cards/
 ├── animal-data.js          # 动物数据（唯一数据源，动态驱动）
 ├── image-interaction.js    # 图片缩放/拖拽交互模块
 ├── common.css / common.js  # 公共样式与逻辑
-├── sw.js                   # Service Worker 离线缓存
+├── sw.js                   # Service Worker（版本时间戳自动生成）
+├── build.sh                # 构建脚本（自动替换 SW 版本）
 ├── manifest.json           # PWA 配置
 ├── dev-log/README.md       # 开发日志
 └── animal/
@@ -55,7 +56,7 @@ word-cards/
 |------|------|
 | HTML/CSS/JS（零依赖） | 纯静态页面 |
 | WebP + srcset | 响应式图片，移动端省 90% 流量 |
-| Service Worker（v5） | 离线缓存，三级缓存策略 |
+| Service Worker（时间戳版本） | 离线缓存，三级策略，`build.sh` 自动生成版本号 |
 | Canvas API | 边缘色提取（异步，不阻塞渲染） |
 | Pointer Events | 跨设备拖拽缩放 |
 | Edge TTS | 预录制 MP3 语音 |
@@ -97,9 +98,7 @@ python3 -m http.server 8080
 **待开发**：水果 / 交通工具 / 颜色形状 / 数字 / 身体部位 / 动物叫声 / 学习统计 / 朗读视觉反馈
 
 **已完成**：
-- [x] Service Worker 离线缓存
-- [x] 图片 JPG → WebP（14MB → 5.8MB）
-- [x] 公共 CSS / JS 模块
-- [x] 响应式图片 srcset
-- [x] 左右滑动翻页
-- [x] 事件泄漏修复 / Edge Color 异步化 / 音频对象复用 / 图片失败兜底
+- [x] Service Worker 离线缓存 + 时间戳自动版本
+- [x] 图片 JPG → WebP（14MB → 5.8MB）+ 响应式 srcset
+- [x] 公共 CSS / JS 模块 + 滑动翻页 + 图片失败兜底
+- [x] 事件泄漏修复 / Edge Color 异步化 / 音频对象复用 / 硬编码消除
