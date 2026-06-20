@@ -409,12 +409,9 @@ function preloadAnimal(index) {
             var url = urls[i];
             var isAudio = /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url);
             if (isAudio) {
-                var audio = new Audio();
-                audio.preload = 'auto';
-                audio.src = url;
-                audio.onloadeddata = oneDone;
-                audio.onerror = oneDone;
-                setTimeout(function() { if (audio.readyState < 2) oneDone(); }, 3000);
+                // 用 fetch 触发缓存，不再创建 Audio 对象
+                fetch(url).then(oneDone).catch(oneDone);
+                setTimeout(oneDone, 3000);
             } else {
                 var img = new Image();
                 img.src = url;
@@ -426,8 +423,8 @@ function preloadAnimal(index) {
     });
 }
 
-// ========== 语音 ==========
-var speechAudio = null;
+// ========== 语音（复用单例） ==========
+var speechAudio = new Audio();
 function speak(lang, animal) {
     try {
         var src;
@@ -435,19 +432,21 @@ function speak(lang, animal) {
         else if (lang === 'en') src = animal.speech_en;
         else if (lang === 'fact') src = animal.speech_fact;
         if (!src) return;
-        if (speechAudio) { speechAudio.pause(); speechAudio = null; }
-        speechAudio = new Audio(src);
+        speechAudio.pause();
+        speechAudio.src = src;
         speechAudio.volume = 1;
         speechAudio.play().catch(function(){});
     } catch(e) {}
 }
 
+var soundAudioPop = new Audio();
 function playAnimalSoundPop(animal) {
     var src = animal.sound;
     if (!src) return;
-    var audio = new Audio(src);
-    audio.volume = 0.8;
-    audio.play().catch(function(){});
+    soundAudioPop.pause();
+    soundAudioPop.src = src;
+    soundAudioPop.volume = 0.8;
+    soundAudioPop.play().catch(function(){});
 }
 
 // ========== 卡片弹出 ==========

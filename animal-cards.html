@@ -347,6 +347,7 @@ function preloadOne(idx) {
 }
 
 // 后台静默加载音频（不阻塞）
+// 用 fetch 触发浏览器/SW 缓存，不再创建 Audio 对象堆积内存
 function preloadAudio(idx) {
     var a = animals[displayOrder[idx]];
     var srcs = [];
@@ -357,9 +358,7 @@ function preloadAudio(idx) {
         if (!preloaded[srcs[i]]) {
             preloaded[srcs[i]] = true;
             (function(src) {
-                var audio = new Audio();
-                audio.preload = 'auto';
-                audio.src = src;
+                fetch(src).catch(function(){}); // 仅触发缓存，不持有对象
             })(srcs[i]);
         }
     }
@@ -432,18 +431,20 @@ function hideLoading() {
     loadingOverlay.classList.add('hidden');
 }
 
-// ========== 音效 ==========
+// ========== 音效（复用单例） ==========
+var soundAudio = new Audio();
 function playAnimalSound() {
     const animal = currentAnimal();
     var src = animal.sound;
     if (!src) return;
-    const audio = new Audio(src);
-    audio.volume = 0.8;
-    audio.play().catch(function() {});
+    soundAudio.pause();
+    soundAudio.src = src;
+    soundAudio.volume = 0.8;
+    soundAudio.play().catch(function() {});
 }
 
-// ========== 语音朗读（预录制 MP3，全平台兼容） ==========
-var speechAudio = null;
+// ========== 语音朗读（复用单例，预录制 MP3，全平台兼容） ==========
+var speechAudio = new Audio();
 
 function speak(lang) {
     try {
@@ -453,8 +454,8 @@ function speak(lang) {
         else if (lang === 'en') src = animal.speech_en;
         else if (lang === 'fact') src = animal.speech_fact;
         if (!src) return;
-        if (speechAudio) { speechAudio.pause(); speechAudio = null; }
-        speechAudio = new Audio(src);
+        speechAudio.pause();
+        speechAudio.src = src;
         speechAudio.volume = 1;
         speechAudio.play().catch(function(){});
     } catch(e) {}
