@@ -27,23 +27,23 @@
 
 | 模式 | 页面 | 说明 |
 |------|------|------|
-| **卡片模式** | `animal-cards.html` | 随机洗牌排序，顺序翻阅，分组预加载 |
+| **卡片模式** | `animal-cards.html` | 随机洗牌排序，顺序翻阅，滑动窗口预加载 |
 | **浏览模式** | `animal-select.html` | 拼音排序，瀑布流方阵，自由选择，弹出卡片详情 |
 
-### 21 种动物
+### 动物种类
 
-狮子、大象、熊猫、老虎、长颈鹿、斑马、企鹅、海豚、猴子、兔子、猫、狗、马、牛、羊、鸡、鸭子、鱼、蝴蝶、青蛙、鲨鱼
+当前数据由 `animal-data.js` 动态驱动，页面自动适配，无需手动修改数量。
 
 ### 交互功能
 
 - **双语学习**：中文名称 + 英文名称，点击朗读发音
 - **科普知识**：每种动物配有中文科普描述，点击朗读
-- **实拍照片**：真实动物照片，支持以下交互：
+- **实拍照片**：真实动物照片（WebP 格式），支持以下交互：
   - 缩放模式切换（右下角按钮）
   - 鼠标滚轮缩放（以光标为锚点）
   - 双指缩放（移动端）
   - 自由拖拽平移
-  - 边缘平均色背景（图片加载后自动提取）
+  - 边缘平均色背景（图片加载后异步提取，不阻塞渲染）
 - **叫声播放**：点击卡片上的 emoji 播放当前动物叫声
 - **浏览模式**：
   - 瀑布流方阵（自适应 2/3/4 列）
@@ -51,11 +51,12 @@
   - emoji 平均色方块背景
   - 已浏览动物 10% 透明度标记
   - 「再来一次」清除浏览记录
-- **分组预加载**：21 个动物随机排序，按 6 个一组切分，首屏预加载 3 组
+- **滑动窗口预加载**：当前卡片 + 后方 3 张 + 前方 1 张，翻页零等待
 - **加载动画**：呼吸缩放 emoji，加载完成后自动淡出
 - **循环导航**：上一个 / 下一个 / 重新洗牌，键盘快捷键
 - **高分辨率适配**：自适应 3:4 竖版高分辨率平板
 - **PWA 支持**：可添加到主屏幕
+- **离线运行**：点击「📡 离线运行」按钮，一键下载全部资源到本地，断网也能用
 
 ---
 
@@ -63,18 +64,21 @@
 
 ```
 word-cards/
-├── index.html              ← 首页（类别入口）
+├── index.html              ← 首页（类别入口 + 离线运行按钮）
 ├── animal-cards.html       ← 动物卡片模式
 ├── animal-select.html      ← 动物浏览模式
-├── animal-data.js          ← 共享数据源（21 种动物）
+├── animal-data.js          ← 共享数据源（动物数据，动态驱动）
 ├── image-interaction.js    ← 公共图片交互模块（缩放/拖拽/双指缩放/边缘色）
+├── sw.js                   ← Service Worker（离线缓存 + 加速）
 ├── manifest.json           ← PWA 配置
 ├── README.md
+├── dev-log/                ← 开发日志
+│   └── README.md
 └── animal/
-    ├── images/             ← 动物实拍照片（{英文名}.jpg，21 张）
-    ├── speech_zh/          ← 中文名称语音（Edge TTS MP3，21 个）
-    ├── speech_en/          ← 英文名称语音（Edge TTS MP3，21 个）
-    ├── speech_fact/        ← 科普描述语音（Edge TTS MP3，21 个）
+    ├── images/             ← 动物实拍照片（{英文名}.webp，WebP 格式）
+    ├── speech_zh/          ← 中文名称语音（Edge TTS MP3）
+    ├── speech_en/          ← 英文名称语音（Edge TTS MP3）
+    ├── speech_fact/        ← 科普描述语音（Edge TTS MP3）
     └── sounds_normalized/  ← 动物叫声 MP3（待添加）
 ```
 
@@ -85,6 +89,8 @@ word-cards/
 | 技术 | 用途 |
 |------|------|
 | HTML/CSS/JS（无框架） | 纯静态页面，零依赖 |
+| WebP | 图片格式，比 JPG 节省 57% 体积 |
+| Service Worker | 离线缓存 + 加载加速（三级缓存策略） |
 | Edge TTS | 预录制 MP3 语音，全平台兼容（含 iOS Safari） |
 | Canvas API | 图片边缘色提取、emoji 平均色提取 |
 | Pointer Events + setPointerCapture | 跨设备拖拽和缩放 |
@@ -155,10 +161,10 @@ python3 -m http.server 8080
 ## 模块说明
 
 ### `animal-data.js`
-共享的动物数据源，包含 21 种动物的中英文名称、emoji、图片路径、语音路径和科普描述。两个模式页面通过 `<script src>` 引用，无需重复维护。
+共享的动物数据源，包含动物的中英文名称、emoji、图片路径（WebP）、语音路径和科普描述。两个模式页面和首页通过 `<script src>` 引用。**新增动物只需在此文件追加一条数据**，所有页面自动适配，无需修改其他文件。
 
 ### `image-interaction.js`
-公共图片交互模块，提供 `initImageInteraction(config)` 函数。封装了缩放切换、鼠标/触摸拖拽、双指缩放、滚轮缩放、边缘色提取等功能。返回 `cleanup()` 函数用于解绑事件。
+公共图片交互模块，提供 `initImageInteraction(config)` 函数。封装了缩放切换、鼠标/触摸拖拽、双指缩放、滚轮缩放、边缘色提取等功能。边缘色提取使用 `requestIdleCallback` 异步执行，不阻塞渲染。返回 `cleanup()` 函数用于解绑事件。
 
 ```js
 var cleanup = initImageInteraction({
@@ -168,6 +174,14 @@ var cleanup = initImageInteraction({
 });
 // 切换图片时调用 cleanup() 清理旧事件
 ```
+
+### `sw.js`
+Service Worker 模块，实现离线缓存与加载加速。
+
+- **核心文件**（HTML/JS/CSS）：Network First 策略，优先最新内容，离线回退缓存
+- **图片/音频**：Stale-While-Revalidate 策略，瞬间返回缓存，后台静默更新
+- **离线运行按钮**：页面通过 `MessageChannel` 向 SW 发送全量下载指令，实时回报进度
+- **版本管理**：`CACHE_VERSION` 升级后自动清理旧缓存
 
 ---
 
@@ -190,6 +204,9 @@ var cleanup = initImageInteraction({
 - [ ] 数字类别
 - [ ] 身体部位类别
 - [ ] 补齐动物叫声 MP3
-- [ ] Service Worker 离线缓存
+- [x] ~~Service Worker 离线缓存~~ ✅ 已完成（`sw.js`）
+- [x] ~~图片转 WebP 优化~~ ✅ 已完成（14MB → 5.8MB）
 - [ ] 学习进度统计
 - [ ] 语音朗读视觉反馈
+- [ ] PWA 正式 PNG 图标
+- [ ] Service Worker 缓存版本自动升级
