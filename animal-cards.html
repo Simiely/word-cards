@@ -423,11 +423,7 @@ function renderImage() {
 
     cardImage.className = 'card-image';
     cardImage.style.backgroundColor = '';
-    var srcset = '';
-    if (animal.image_400 && animal.image_800) {
-        srcset = ' srcset="' + animal.image_400 + ' 400w, ' + animal.image_800 + ' 800w, ' + animal.image + ' 1600w" sizes="(max-width: 600px) 100vw, 50vw"';
-    }
-    cardImage.innerHTML = '<img src="' + animal.image + '"' + srcset + ' alt="' + animal.zh + '" id="cardImg" style="opacity:0"><button class="zoom-toggle" id="zoomToggle" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button>';
+    cardImage.innerHTML = '<img src="' + animal.image + '" alt="' + animal.zh + '" id="cardImg" style="opacity:0"><button class="zoom-toggle" id="zoomToggle" title="放大填充"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><line x1="20" y1="20" x2="16" y2="16"/></svg></button>';
 
     var cardImgEl = document.getElementById('cardImg');
     var zoomBtn = document.getElementById('zoomToggle');
@@ -598,3 +594,4 @@ preloadBatch(initialTargets).then(function() {
 </script>
 </body>
 </html>
+
