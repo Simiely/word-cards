@@ -160,5 +160,11 @@
     <div class="footer">Made with ❤️ for kids</div>
 </div>
 
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/word-cards/sw.js').catch(function(){});
+}
+</script>
+
 </body>
 </html>

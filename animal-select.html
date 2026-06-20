@@ -252,6 +252,11 @@
 
 <div class="loading-dot" id="loadingDot">🦁</div>
 
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/word-cards/sw.js').catch(function(){});
+}
+</script>
 <script src="animal-data.js"></script>
 <script src="image-interaction.js"></script>
 <script>
