@@ -341,7 +341,6 @@ function preloadAnimal(index) {
         if (a.speech_zh) urls.push(a.speech_zh);
         if (a.speech_en) urls.push(a.speech_en);
         if (a.speech_fact) urls.push(a.speech_fact);
-        if (a.sound) urls.push(a.sound);
 
         if (urls.length === 0) { resolve(); return; }
         var pending = urls.length;
@@ -461,7 +460,7 @@ document.getElementById('popCard').addEventListener('click', function(e) {
     if (target === popZhName) { speak('zh', a); }
     else if (target === popEnName) { speak('en', a); }
     else if (target === popFact) { speak('fact', a); }
-    else if (target === popEmoji) { playAnimalSound(a); }
+    else if (target === popEmoji) { speak('zh', a); }
 });
 
 // ========== 再来一次 ==========
