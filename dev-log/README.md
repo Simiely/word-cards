@@ -26,7 +26,7 @@
 | 4 | 消除硬编码 | 新增动物只改 `animal-data.js` |
 | 5 | 事件泄漏修复 | 21 个重复监听器 → 事件代理 |
 | 6 | Edge Color 异步化 | 采样 200px + `requestIdleCallback`，计算量降 25 倍 |
-| 7 | 音频对象复用 | 63+ Audio → 2 个（播放单例 + fetch 预加载） |
+| 7 | 音频对象复用 | 63+ Audio → 1 个（播放单例） |
 | 8 | JPG → WebP | 14MB → 5.8MB（省 57%），含多尺寸后总计 7.7MB |
 | 9 | 响应式 srcset | 移动端首屏 ~3MB → ~112KB |
 | 10 | common.css / common.js | 消除 ~270 行重复 |
