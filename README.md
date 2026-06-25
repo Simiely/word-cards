@@ -46,7 +46,6 @@ word-cards/
 └── animal/
     ├── images/             # 动物照片（JPEG 原图）
     ├── speech_zh/en/fact/  # Edge TTS 语音
-    └── sounds_normalized/  # 动物叫声（待添加）
 ```
 
 ---
@@ -69,7 +68,7 @@ word-cards/
 - **`animal-data.js`** — 唯一数据源。新增动物只需追加一条，所有页面自动适配
 - **`image-interaction.js`** — `initImageInteraction(config)` 返回 `cleanup()`，封装缩放/拖拽/双指/边缘色
 - **`common.css`** — `:root` 变量、reset、pulse 动画、card-image/zoom-toggle/card-body 公共样式
-- **`common.js`** — `registerSW()`、`speak()`、`playAnimalSound()`、`collectOfflineUrls()`、`initOfflineButton()`
+- **`common.js`** — `registerSW()`、`speak()`、`collectOfflineUrls()`、`initOfflineButton()`
 - **`sw.js`** — 核心文件 Network First，图片音频 Stale-While-Revalidate，支持 MessageChannel 全量下载
 
 ---
@@ -103,6 +102,6 @@ python3 -m http.server 8080
 
 ## 后续规划
 
-**待开发**：水果 / 交通工具 / 颜色形状 / 数字 / 身体部位 / 动物叫声 / 学习统计 / 朗读视觉反馈
+**待开发**：水果 / 交通工具 / 颜色形状 / 数字 / 身体部位 / 学习统计 / 朗读视觉反馈
 
 **已完成**：详见 [dev-log/README.md](dev-log/README.md)
