@@ -1,6 +1,6 @@
 // ============================================================
 // common.js — 公共模块（三页面共享）
-// 提供：SW注册、音频播放单例、离线下载通用逻辑
+// 提供：SW注册、语音朗读单例、离线下载通用逻辑
 // 依赖：animal-data.js（提供全局 animals 数组）
 // ============================================================
 
@@ -28,18 +28,6 @@ function speak(lang, animal) {
     } catch(e) {}
 }
 
-// ---- 动物叫声单例 ----
-var soundAudio = new Audio();
-
-function playAnimalSound(animal) {
-    var src = animal.sound;
-    if (!src) return;
-    soundAudio.pause();
-    soundAudio.src = src;
-    soundAudio.volume = 0.8;
-    soundAudio.play().catch(function(){});
-}
-
 // ---- 收集全部离线资源 URL ----
 function collectOfflineUrls() {
     var urls = [
@@ -59,7 +47,6 @@ function collectOfflineUrls() {
         if (a.speech_zh) urls.push(a.speech_zh);
         if (a.speech_en) urls.push(a.speech_en);
         if (a.speech_fact) urls.push(a.speech_fact);
-        if (a.sound) urls.push(a.sound);
     }
     return urls;
 }
