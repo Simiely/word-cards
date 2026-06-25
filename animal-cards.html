@@ -559,7 +559,7 @@ document.getElementById('card').addEventListener('pointerup', function(e) {
     if (target === zhNameEl) { speakAndCopy('zh'); }
     else if (target === enNameEl) { speakAndCopy('en'); }
     else if (target === factEl) { speak('fact', currentAnimal()); }
-    else if (target === animalEmojiEl) { playAnimalSound(currentAnimal()); }
+    else if (target === animalEmojiEl) { speak('zh', currentAnimal()); }
 });
 
 // ========== 启动 ==========
